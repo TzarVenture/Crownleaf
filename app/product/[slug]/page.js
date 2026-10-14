@@ -113,7 +113,7 @@ export default async function ProductDetailPage({ params }) {
         </nav>
 
         {/* 2-Column Product Showcase Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start pb-16 border-b border-[#E2D9CF]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start pb-6 sm:pb-10 lg:pb-16 border-b border-[#E2D9CF]">
           {/* Left Column: Interactive Borderless Studio Gallery */}
           <div>
             <ProductGallery images={product.images || []} productName={product.name} />
@@ -188,7 +188,7 @@ export default async function ProductDetailPage({ params }) {
             </div>
 
             {/* Share Icons */}
-            <div className="mt-6 pt-4 border-t border-[#E2D9CF]">
+            <div className="mt-5 pt-3.5 border-t border-[#E2D9CF]">
               <ShareButtons title={product.name} />
             </div>
           </div>
@@ -196,7 +196,7 @@ export default async function ProductDetailPage({ params }) {
 
         {/* Real Detailed Description from WordPress (post_content) */}
         {product.description && (
-          <section className="py-12 border-b border-[#E2D9CF]">
+          <section className="py-8 sm:py-12 border-b border-[#E2D9CF]">
             <h2 className="text-xl font-bold text-[#003108] mb-6 tracking-tight">
               Product Overview &amp; Specifications
             </h2>
