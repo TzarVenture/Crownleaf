@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -10,6 +11,11 @@
   --color-crown-canvas: #FAF8F5;
 
   --font-montserrat: var(--font-montserrat), Montserrat, sans-serif;
+  --font-cursive: "Alex Brush", cursive;
+}
+
+.font-cursive {
+  font-family: "Alex Brush", cursive;
 }
 
 body {

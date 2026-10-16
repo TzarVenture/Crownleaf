@@ -1,6 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ProductCard from "@/components/ProductCard";
+import CategoryShowcase from "@/components/CategoryShowcase";
+import OccasionShowcase from "@/components/OccasionShowcase";
 import { wcApi } from "@/lib/woocommerce";
 
 export const revalidate = 60; // Revalidate inventory cache every 60 seconds (ISR)
@@ -42,9 +44,15 @@ export default async function HomePage() {
       <main className="flex-1">
         <Hero />
 
+        {/* Curated Category Showcase */}
+        <CategoryShowcase />
+
+        {/* Brand Highlights & Occasion Showcase */}
+        <OccasionShowcase />
+
         {/* Category Navigation Strip */}
         {categories.length > 0 && (
-          <section id="categories" className="py-5 px-4 sm:px-6 lg:px-8 bg-white border-b border-[#E2D9CF]">
+          <section id="categories" className="py-5 px-4 sm:px-6 lg:px-8 bg-white border-y border-[#E2D9CF]">
             <div className="max-w-[1300px] mx-auto">
               <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
                 <span className="text-[11px] uppercase tracking-wider font-bold text-slate-400 whitespace-nowrap mr-2">
