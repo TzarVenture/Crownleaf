@@ -15,9 +15,9 @@ export default function ProductGallery({ images = [], productName = "Product" })
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Primary Display Stage */}
-      <div className="relative aspect-square w-full rounded-2xl bg-white p-8 flex items-center justify-center overflow-hidden shadow-xs">
+    <div className="flex flex-col gap-3 sm:gap-4">
+      {/* Primary Display Stage - Maximized canvas on mobile with snug padding */}
+      <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl bg-white p-3 sm:p-8 flex items-center justify-center overflow-hidden shadow-xs border border-[#E4DCCF]">
         {selectedImage ? (
           <Image
             src={selectedImage}
@@ -25,7 +25,7 @@ export default function ProductGallery({ images = [], productName = "Product" })
             fill
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-contain p-6 transition-all duration-300"
+            className="object-contain p-2 sm:p-6 transition-all duration-300"
           />
         ) : (
           <div className="text-slate-400 text-xs font-medium">Image Preview Unavailable</div>
@@ -34,7 +34,7 @@ export default function ProductGallery({ images = [], productName = "Product" })
 
       {/* Thumbnails Row */}
       {images.length > 1 && (
-        <div className="flex items-center gap-3 overflow-x-auto p-1.5 scrollbar-none">
+        <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto p-1 scrollbar-none overscroll-x-contain">
           {images.map((img, index) => {
             const isSelected = selectedImage === img.src;
             return (
@@ -42,10 +42,10 @@ export default function ProductGallery({ images = [], productName = "Product" })
                 key={img.id || index}
                 type="button"
                 onClick={() => setSelectedImage(img.src)}
-                className={`relative w-20 h-20 rounded-xl bg-white p-2 flex-shrink-0 border-2 transition-all ${
+                className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl bg-white p-1.5 flex-shrink-0 border-2 transition-all cursor-pointer ${
                   isSelected
                     ? "border-[#A67D44] shadow-xs"
-                    : "border-transparent opacity-75 hover:opacity-100"
+                    : "border-[#E4DCCF]/80 opacity-75 hover:opacity-100"
                 }`}
                 aria-label={`View image ${index + 1}`}
               >

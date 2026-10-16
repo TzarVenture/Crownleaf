@@ -81,7 +81,7 @@ export default function ShareButtons({ title = "" }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Share on ${item.name}`}
-            className="w-9.5 h-9.5 sm:w-8 sm:h-8 rounded-full border border-[#E2D9CF] bg-white text-slate-600 hover:text-[#003108] hover:border-[#003108] transition-all flex items-center justify-center shadow-2xs hover:scale-105 active:scale-95"
+            className="w-9.5 h-9.5 sm:w-8 sm:h-8 rounded-full border border-[#E4DCCF] bg-[#FAF7F0] text-stone-600 hover:text-[#17472F] hover:border-[#17472F] transition-all flex items-center justify-center shadow-2xs hover:scale-105 active:scale-95"
           >
             {item.icon}
           </a>
@@ -92,7 +92,7 @@ export default function ShareButtons({ title = "" }) {
           type="button"
           onClick={handleCopyLink}
           aria-label="Copy page link"
-          className="h-9.5 sm:h-8 px-3 sm:px-2.5 rounded-full border border-[#E2D9CF] bg-white text-slate-600 hover:text-[#003108] hover:border-[#003108] transition-all flex items-center gap-1.5 text-xs sm:text-[11px] font-medium shadow-2xs active:scale-95"
+          className="h-9.5 sm:h-8 px-3 sm:px-2.5 rounded-full border border-[#E4DCCF] bg-[#FAF7F0] text-stone-600 hover:text-[#17472F] hover:border-[#17472F] transition-all flex items-center gap-1.5 text-xs sm:text-[11px] font-medium shadow-2xs active:scale-95"
         >
           <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5 fill-current" viewBox="0 0 24 24">
             <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
