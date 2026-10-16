@@ -2,13 +2,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-crown-green: #003108;
-  --color-crown-green-dark: #002205;
-  --color-crown-gold: #A67D44;
+  --color-crown-green: #17472F;
+  --color-crown-green-dark: #123825;
+  --color-crown-gold: #A47A3C;
   --color-crown-gold-hover: #8E6935;
-  --color-crown-cream: #EFE8E0;
-  --color-crown-border: #D1B2B2;
-  --color-crown-canvas: #FAF8F5;
+  --color-crown-cream: #FAF7F0;
+  --color-crown-border: #E4DCCF;
+  --color-crown-canvas: #F4EFE6;
 
   --font-montserrat: var(--font-montserrat), Montserrat, sans-serif;
   --font-cursive: "Alex Brush", cursive;
@@ -18,8 +18,31 @@
   font-family: "Alex Brush", cursive;
 }
 
+html {
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
 body {
-  background-color: #FAF8F5;
+  background-color: #F4EFE6;
   color: #1E293B;
   font-family: var(--font-montserrat), Montserrat, sans-serif;
+}
+
+/* Minimalist warm scrollbar matching Crownleaf palette */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4EFE6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1C4B0;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A47A3C;
 }
