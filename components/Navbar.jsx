@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCart } from "@/context/CartContext";
 
 // Official CrownLeaf logo
 const LOGO_SRC = "https://crownleaf.co/wp-content/uploads/2026/07/Adshalaa_Logo-4.png";
@@ -36,6 +37,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
   const pathname = usePathname();
+  const { cart, openCart } = useCart();
 
   // Toggle category expansion inside drawer
   const toggleCategory = (label) => {
@@ -95,7 +97,6 @@ export default function Navbar() {
                 </svg>
               </button>
             </div>
-
             {/* Brand Logo: Official Crownleaf Image (Responsive for mobile & desktop) */}
             <div className="flex shrink-0 items-center">
               <Link
@@ -244,18 +245,21 @@ export default function Navbar() {
                   </span>
                 </button>
 
-                {/* Shopping Bag / Cart Icon with "0" Badge */}
+                {/* Shopping Bag / Cart Icon with Live Badge */}
                 <button
                   type="button"
-                  aria-label="Shopping Cart"
+                  onClick={openCart}
+                  aria-label={`Shopping Cart with ${cart.itemsCount} items`}
                   className="relative p-1.5 hover:text-[#A67D44] transition-colors cursor-pointer"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#CC0000] text-white text-[9px] font-bold flex items-center justify-center leading-none">
-                    0
-                  </span>
+                  {cart.itemsCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#17472F] text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                      {cart.itemsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
