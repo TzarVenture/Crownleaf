@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useCart } from "@/context/CartContext";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { cart, openCart } = useCart();
 
   return (
-    <header className="sticky top-0 z-50 w-full shadow-xs">
+    <header className="sticky top-0 z-40 w-full shadow-xs">
       {/* Top Announcement Bar */}
       <div className="bg-[#003108] text-white text-xs py-2 px-4 border-b border-black/10">
         <div className="max-w-[1300px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-1.5 text-center sm:text-left">
@@ -72,7 +74,29 @@ export default function Navbar() {
           </div>
 
           {/* Action CTAs */}
-          <div className="hidden sm:flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-3 sm:gap-4">
+            {/* Cart Trigger Button */}
+            <button
+              type="button"
+              onClick={openCart}
+              className="relative p-2.5 rounded-full border border-[#D1B2B2] bg-white/70 hover:bg-white text-[#003108] hover:text-[#A67D44] transition-all flex items-center justify-center shadow-2xs group"
+              aria-label={`Open shopping cart with ${cart.itemsCount} items`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+              {cart.itemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#003108] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#EFE8E0] shadow-xs">
+                  {cart.itemsCount}
+                </span>
+              )}
+            </button>
+
             <a
               href="#enquiry"
               className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] transition-all shadow-xs"
@@ -81,8 +105,29 @@ export default function Navbar() {
             </a>
           </div>
 
-          {/* Mobile Hamburger Toggle */}
-          <div className="flex sm:hidden items-center gap-3">
+          {/* Mobile Actions: Cart Trigger + Hamburger */}
+          <div className="flex sm:hidden items-center gap-2">
+            <button
+              type="button"
+              onClick={openCart}
+              className="relative p-2 rounded-full border border-[#D1B2B2] bg-white/80 text-[#003108] transition-colors flex items-center justify-center shadow-2xs"
+              aria-label={`Open shopping cart with ${cart.itemsCount} items`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+              {cart.itemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#003108] text-white text-[9px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#EFE8E0]">
+                  {cart.itemsCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-[#003108] focus:outline-none"

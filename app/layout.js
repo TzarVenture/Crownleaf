@@ -1,5 +1,7 @@
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/context/CartContext";
+import CartDrawer from "@/components/CartDrawer";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -18,7 +20,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
-        {children}
+        <CartProvider>
+          {children}
+          <CartDrawer />
+        </CartProvider>
       </body>
     </html>
   );

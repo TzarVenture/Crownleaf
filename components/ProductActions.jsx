@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { useCart } from "@/context/CartContext";
 
 export default function ProductActions({ product }) {
   const [quantity, setQuantity] = useState(1);
@@ -18,14 +18,11 @@ export default function ProductActions({ product }) {
     return initial;
   });
 
-  const [drawerOpen, setDrawerOpen] = useState(null); // 'cart' | 'checkout' | null
   const [addedNotice, setAddedNotice] = useState(false);
+  const { addToCart, openCart } = useCart();
 
   const isInStock = product.stock_status === "instock";
   const maxStock = product.stock_quantity || 999;
-  const unitPrice = parseFloat(product.price || 0);
-  const totalPrice = (unitPrice * quantity).toLocaleString("en-IN");
-  const productImage = product.images?.[0]?.src || null;
 
   const handleDecrement = () => {
     if (quantity > 1) {
@@ -53,15 +50,15 @@ export default function ProductActions({ product }) {
   const handleAddToCart = () => {
     if (!isInStock) return;
     setAddedNotice(true);
-    setDrawerOpen("cart");
+    addToCart(product, quantity, selectedAttributes);
     setTimeout(() => {
       setAddedNotice(false);
-    }, 3000);
+    }, 3500);
   };
 
   const handleBuyNow = () => {
     if (!isInStock) return;
-    setDrawerOpen("checkout");
+    addToCart(product, quantity, selectedAttributes);
   };
 
   return (
@@ -184,8 +181,8 @@ export default function ProductActions({ product }) {
             </span>
             <button
               type="button"
-              onClick={() => setDrawerOpen("cart")}
-              className="text-[11px] text-emerald-900 underline font-bold uppercase tracking-wider ml-4"
+              onClick={openCart}
+              className="text-[11px] text-emerald-900 underline font-bold uppercase tracking-wider ml-4 cursor-pointer"
             >
               View Bag
             </button>
@@ -250,167 +247,6 @@ export default function ProductActions({ product }) {
           </div>
         </div>
       </div>
-
-      {/* Slide-over Drawer for Cart & Instant Checkout Preview */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Overlay backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 transition-opacity"
-            onClick={() => setDrawerOpen(null)}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white border-l border-[#E2D9CF] shadow-2xl flex flex-col justify-between">
-              {/* Drawer Header */}
-              <div className="p-6 border-b border-[#E2D9CF] flex items-center justify-between bg-stone-50">
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#003108]">
-                    {drawerOpen === "cart" ? "Shopping Bag" : "Instant Checkout Preview"}
-                  </h3>
-                  <span className="text-[11px] text-slate-500">
-                    {drawerOpen === "cart" ? "1 Item in your order" : "Review your direct order"}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(null)}
-                  className="w-8 h-8 rounded-full border border-[#E2D9CF] bg-white text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold"
-                  aria-label="Close panel"
-                >
-                  &times;
-                </button>
-              </div>
-
-              {/* Drawer Content Body */}
-              <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                {/* Product summary card */}
-                <div className="flex gap-4 p-4 rounded-xl border border-[#E2D9CF] bg-stone-50/50">
-                  {productImage ? (
-                    <div className="relative w-20 h-20 rounded-lg bg-white border border-[#E2D9CF] overflow-hidden flex-shrink-0">
-                      <Image
-                        src={productImage}
-                        alt={product.name}
-                        fill
-                        className="object-contain p-1"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-stone-100 flex items-center justify-center text-[10px] text-slate-400">
-                      No Image
-                    </div>
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-[#003108] line-clamp-2">
-                      {product.name}
-                    </h4>
-
-                    {/* Display chosen attributes */}
-                    {Object.keys(selectedAttributes).length > 0 && (
-                      <div className="mt-1 text-[11px] text-slate-500">
-                        {Object.entries(selectedAttributes).map(([k, v]) => (
-                          <span key={k} className="mr-2">
-                            {k}: <strong className="text-slate-700">{v}</strong>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-500">
-                        Qty: <strong className="text-[#003108]">{quantity}</strong>
-                      </span>
-                      <span className="text-xs font-bold text-[#003108]">
-                        ₹{totalPrice}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Staged Checkout / Order Summary */}
-                <div className="space-y-3 pt-4 border-t border-[#E2D9CF]">
-                  <span className="text-xs uppercase tracking-wider font-bold text-[#003108] block">
-                    Order Summary
-                  </span>
-                  <div className="flex justify-between text-xs text-slate-600">
-                    <span>Unit Price</span>
-                    <span>₹{unitPrice.toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-600">
-                    <span>Quantity</span>
-                    <span>&times; {quantity}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-600">
-                    <span>Pan-India Delivery</span>
-                    <span className="text-emerald-700 font-semibold">Free Express</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-600">
-                    <span>Taxes &amp; GST</span>
-                    <span>Included</span>
-                  </div>
-                  <div className="pt-3 border-t border-[#E2D9CF] flex justify-between text-sm font-bold text-[#003108]">
-                    <span>Total Amount</span>
-                    <span>₹{totalPrice}</span>
-                  </div>
-                </div>
-
-                {/* Information Callout */}
-                <div className="p-4 rounded-lg bg-amber-50/60 border border-amber-200 text-xs text-amber-900 leading-relaxed">
-                  <span className="font-bold block mb-1">
-                    Storefront Notice:
-                  </span>
-                  Payment gateway and multi-item cart storage are scheduled for the next phase. The quantity increment/decrement, variant selection, and buy actions are operating on the frontend.
-                </div>
-              </div>
-
-              {/* Drawer Footer Actions */}
-              <div className="p-6 border-t border-[#E2D9CF] bg-stone-50 space-y-3">
-                {drawerOpen === "cart" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setDrawerOpen("checkout")}
-                      className="w-full py-3.5 px-6 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#003108] text-white hover:bg-[#002205] transition-all text-center shadow-xs"
-                    >
-                      Proceed to Checkout (₹{totalPrice})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDrawerOpen(null)}
-                      className="w-full py-2.5 px-6 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors text-center"
-                    >
-                      Continue Shopping
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        alert(
-                          `Order intent recorded for ${quantity} unit(s) of "${product.name}". Total: ₹${totalPrice}. Payment gateway will be connected in next phase.`
-                        );
-                        setDrawerOpen(null);
-                      }}
-                      className="w-full py-3.5 px-6 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] transition-all text-center shadow-xs"
-                    >
-                      Place Order (Staged)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDrawerOpen(null)}
-                      className="w-full py-2.5 px-6 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors text-center"
-                    >
-                      Back to Product
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
