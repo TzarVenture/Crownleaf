@@ -1,8 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import GiftingCategories from "@/components/GiftingCategories";
-import CategorySection from "@/components/CategorySection";
-import OccasionEnquiryForm from "@/components/OccasionEnquiryForm";
+import ProductCard from "@/components/ProductCard";
+import CategoryShowcase from "@/components/CategoryShowcase";
+import OccasionShowcase from "@/components/OccasionShowcase";
 import Footer from "@/components/Footer";
 import { wcApi } from "@/lib/woocommerce";
 
@@ -13,29 +13,17 @@ async function getInventory() {
     const [corporateRes, drinkwareRes] = await Promise.all([
       wcApi.get("products", {
         status: "publish", // Mandatory rule: Published products only
-        per_page: 16,
+        per_page: 8,
       }),
       wcApi.get("products", {
+        category: "39", // Drinkware collection
         status: "publish",
-        category: "39", // Drinkware category ID from WooCommerce backend
-        per_page: 16,
+        per_page: 8,
       }),
     ]);
 
-    // Prioritize complete gift sets and executive hampers over standalone diaries/notebooks
-    const rawCorporate = corporateRes.data || [];
-    const corporateGiftSets = rawCorporate.filter((p) => {
-      const lower = p.name.toLowerCase();
-      return (
-        !lower.includes("notebook") &&
-        !lower.includes("notepads") &&
-        !lower.includes("diary") &&
-        !lower.includes("paper notebook")
-      );
-    });
-
     return {
-      corporateProducts: corporateGiftSets.length > 0 ? corporateGiftSets : rawCorporate,
+      corporateProducts: corporateRes.data || [],
       drinkwareProducts: drinkwareRes.data || [],
       error: null,
     };
@@ -53,47 +41,71 @@ export default async function HomePage() {
   const { corporateProducts, drinkwareProducts, error } = await getInventory();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4EFE6]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
       <Navbar />
       <main className="flex-1">
         <Hero />
 
-        {/* Curated Gifting Collections Discovery */}
-        <GiftingCategories title="Gifting Categories" />
+        {/* Curated Category Showcase */}
+        <CategoryShowcase />
 
-        {/* Diagnostic Error Notice */}
-        {error ? (
-          <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full">
+        {/* Brand Highlights & Occasion Showcase */}
+        <OccasionShowcase />
+
+        {/* Section 1: Featured Corporate Gifts & Hampers */}
+        <section id="inventory" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full">
+          {/* Section Header with Flanking Architectural Hairlines */}
+          <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
+              Featured Corporate Gifts &amp; Hampers
+            </h2>
+            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+          </div>
+
+          {/* Diagnostic Error Notice */}
+          {error ? (
             <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-800">
               <h3 className="font-bold text-sm uppercase tracking-wider mb-1">API Notice</h3>
               <p className="text-sm">{error}</p>
             </div>
+          ) : corporateProducts.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-2xl border border-[#E2D9CF]">
+              <p className="text-slate-500 text-sm font-medium">
+                No published products currently available in this collection.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
+              {corporateProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Section 2: Executive Drinkware & Desk Essentials */}
+        {drinkwareProducts.length > 0 && (
+          <section id="drinkware" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full border-t border-[#E2D9CF]/60">
+            {/* Section Header with Flanking Architectural Hairlines */}
+            <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+              <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
+                Executive Drinkware &amp; Desk Essentials
+              </h2>
+              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
+              {drinkwareProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </section>
-        ) : (
-          <div id="inventory">
-            {/* Section 1: Corporate Gifts Online - For Client & Employee */}
-            <CategorySection
-              title="Corporate Gifts Online - For Client & Employee"
-              description="One Stop Solution for unique and premium corporate gift hampers. Explore our top high quality gifting options for employees and clients at affordable prices across India."
-              products={corporateProducts}
-              categoryHref="https://crownleaf.co/product-category/welcome-kit/"
-            />
-
-            {/* Section 2: Drink Ware */}
-            <CategorySection
-              title="Drink Ware"
-              description="From stylish mugs to sleek water bottles and tumblers, our drinkware options are perfect for everyday use and ensure brand recall value."
-              products={drinkwareProducts}
-              categoryHref="https://crownleaf.co/product-category/drinkware/"
-            />
-          </div>
         )}
-
-        {/* Occasion Gifting Enquiry Form Section */}
-        <OccasionEnquiryForm />
       </main>
 
-      {/* Comprehensive Atelier Footer */}
+      {/* Comprehensive Atelier Footer with WhatsApp Float */}
       <Footer />
     </div>
   );

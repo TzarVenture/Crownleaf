@@ -1,189 +1,124 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
-
-const SLIDES = [
-  {
-    id: "slide-1",
-    headingLine1: "Thoughtful gifts.",
-    headingLine2: "Timeless impressions.",
-    description: "Elevate your corporate gifting experience with elegance",
-    buttonLabel: "Discover Now",
-    buttonHref: "#inventory",
-    desktopImage:
-      "https://crownleaf.co/wp-content/uploads/2025/10/banner-2-7-scaled.webp",
-    mobileImage: "/images/hero/pexels6.jpg",
-    alt: "CrownLeaf Black Luxury Gift Box with Gold Ribbon",
-  },
-  {
-    id: "slide-2",
-    headingLine1: "Make every gift",
-    headingLine2: "unforgettable.",
-    description: "Curated with care, wrapped in sophistication.",
-    buttonLabel: "Explore Now",
-    buttonHref: "#inventory",
-    desktopImage:
-      "https://crownleaf.co/wp-content/uploads/2025/10/banner-3-5-scaled.webp",
-    mobileImage: "/images/hero/pexels4.jpg",
-    alt: "CrownLeaf Corporate Colleagues Exchanging Gift Hamper",
-  },
-];
 
 export default function Hero() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
-  }, []);
-
-  const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
-  }, []);
-
-  useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      nextSlide();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
-
   return (
     <section
-      className="relative w-full overflow-hidden bg-white select-none"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      aria-label="Hero Carousel"
+      id="hero-section"
+      aria-label="CrownLeaf Corporate Gifting Atelier"
+      className="relative w-full overflow-hidden bg-[#FAF8F5] select-none border-b border-[#D1B2B2]/60 h-[calc(100svh-96px)] sm:h-[calc(100dvh-116px)]"
+      style={{ height: "calc(100dvh - var(--navbar-height, 116px))" }}
     >
-      {/* Slides Container */}
-      <div className="relative w-full h-[310px] xs:h-[330px] sm:h-[380px] md:h-[450px] lg:h-[520px]">
-        {/* Background Image Slides */}
-        <div className="absolute inset-0 z-0">
-          {SLIDES.map((slide, index) => {
-            const isActive = index === currentSlide;
-            return (
-              <div
-                key={`bg-${slide.id}`}
-                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
-                  }`}
-              >
-                {/* Desktop High-Res Banner (Visible on lg and up) */}
-                <div className="hidden lg:block absolute inset-0">
-                  <Image
-                    src={slide.desktopImage}
-                    alt={slide.alt}
-                    fill
-                    priority={index === 0}
-                    sizes="100vw"
-                    className="object-cover object-[28%_center]"
-                  />
-                </div>
+      {/* 1. Background studio table tone matching the photo */}
+      <div className="absolute inset-0 bg-[#FAF6ED] pointer-events-none" />
 
-                {/* Cropped Image for md and sm screens: Anchored left so subjects are visible */}
-                <div className="block lg:hidden absolute inset-0">
-                  <Image
-                    src={slide.mobileImage}
-                    alt={slide.alt}
-                    fill
-                    priority={index === 0}
-                    sizes="100vw"
-                    className="object-cover object-[15%_center] xs:object-[18%_center] sm:object-[22%_center]"
-                  />
-                  {/* Gentle overlay to ensure copy legibility */}
-                  <div className="absolute inset-0 bg-black/25 sm:bg-black/20" />
+      {/* 2. Uncropped Hamper Image pinned to the right and scaled to fit container height */}
+      <div className="absolute right-0 top-0 bottom-0 h-full flex items-center justify-end pointer-events-none select-none py-1 sm:py-2.5 lg:py-3.5 pr-0 sm:pr-2 lg:pr-3">
+        <Image
+          src="/images/hero-showcase.jpg"
+          alt="CrownLeaf Luxury Executive Corporate Gifting Hamper"
+          width={1024}
+          height={576}
+          priority
+          className="h-full w-auto max-w-none object-contain object-right select-none [-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_15%)] [mask-image:linear-gradient(to_right,transparent_0%,black_15%)]"
+        />
+      </div>
+
+      {/* 3. Hero Content Container (Positioned in the Open Left Studio Space) */}
+      <div className="relative z-10 max-w-[1300px] mx-auto w-full h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
+          <div className="max-w-[380px] xs:max-w-[420px] sm:max-w-[450px] lg:max-w-[480px]">
+            {/* Eyebrow Tag */}
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.22em] text-[#A67D44] block mb-2 sm:mb-2.5">
+              Premium Corporate Gifting
+            </span>
+
+            {/* Display Headline */}
+            <h1 className="text-2xl xs:text-3xl sm:text-4xl lg:text-[44px] font-bold tracking-tight text-[#003108] leading-[1.14]">
+              Thoughtful Gifts.{" "}
+              <span className="text-[#A67D44] block sm:inline">Strong Impressions.</span>
+            </h1>
+
+            {/* Subtle Atelier Divider */}
+            <div className="flex items-center gap-2 my-3 sm:my-3.5">
+              <div className="h-px w-8 bg-[#A67D44]/40" />
+              <div className="w-1.5 h-1.5 rotate-45 border border-[#A67D44]" />
+              <div className="h-px w-8 bg-[#A67D44]/40" />
+            </div>
+
+            {/* Subtitle */}
+            <p className="text-xs sm:text-sm lg:text-[15px] text-stone-700 leading-relaxed font-normal max-w-md">
+              Elevate relationships and show appreciation with curated, branded gifts that leave a lasting impact on employees, clients, and partners.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="mt-5 sm:mt-7 flex flex-wrap items-center gap-3 sm:gap-4">
+              <a
+                href="#inventory"
+                className="inline-flex items-center justify-center px-5 sm:px-7 py-2.5 sm:py-3.5 bg-[#A67D44] hover:bg-[#8E6935] text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs"
+              >
+                <span>Explore Corporate Gifts</span>
+                <span className="ml-2 text-xs">→</span>
+              </a>
+
+              <a
+                href="https://wa.me/917760775875?text=Hi%20Crownleaf,%20I%20would%20like%20to%20request%20a%20corporate%20gifting%20quote."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-5 sm:px-7 py-2.5 sm:py-3.5 bg-white/90 hover:bg-white text-[#003108] border border-[#003108]/30 hover:border-[#003108] text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs"
+              >
+                Request a Quote
+              </a>
+            </div>
+
+            {/* 3. Trust Badges Strip with Prominent Sized Icons */}
+            <div className="mt-7 sm:mt-9 pt-4 sm:pt-5 border-t border-[#D1B2B2]/60 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              {/* Badge 1: Bulk Orders */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <div className="leading-tight">
+                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Bulk Orders</div>
+                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Made Easy</div>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Slide Content Overlay - Lean Atelier Card Anchored Right with Snug Proportions */}
-        <div className="relative z-10 h-full max-w-[1300px] mx-auto px-3 xs:px-4 sm:px-6 md:pr-24 lg:pr-32 xl:pr-36 flex items-end pb-3.5 sm:pb-0 sm:items-center justify-end pointer-events-none">
-          <div className="relative w-[150px] xs:w-[165px] sm:w-[280px] md:w-[335px] lg:w-[350px] h-[122px] xs:h-[130px] sm:h-[168px] md:h-[178px] lg:h-[188px] md:mr-3 lg:mr-4 shrink-0 pointer-events-auto bg-[#FAF7F0]/95 backdrop-blur-md p-2.5 xs:p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border border-[#E4DCCF] shadow-lg text-left">
-            {SLIDES.map((slide, index) => {
-              const isActive = index === currentSlide;
-              return (
-                <div
-                  key={`text-${slide.id}`}
-                  className={`absolute inset-2.5 xs:inset-3 sm:inset-4 md:inset-5 flex flex-col justify-start gap-1 xs:gap-1.5 sm:gap-2.5 transition-opacity duration-400 ease-in-out ${isActive
-                    ? "opacity-100 z-10 pointer-events-auto"
-                    : "opacity-0 z-0 pointer-events-none"
-                    }`}
-                >
-                  <div className="space-y-0.5 sm:space-y-1">
-                    {/* Headline */}
-                    <h1 className="text-[11px] xs:text-[12px] sm:text-base md:text-xl lg:text-[22px] font-bold text-[#17472F] leading-[1.2] tracking-tight">
-                      <span className="block">{slide.headingLine1}</span>
-                      <span className="block text-[#A47A3C]">{slide.headingLine2}</span>
-                    </h1>
-
-                    {/* Subtle hairline rule */}
-                    <div className="w-4 sm:w-7 h-0.5 bg-[#A47A3C]/40" />
-
-                    {/* Description */}
-                    <p className="text-[8.5px] xs:text-[9px] sm:text-xs font-light text-stone-700 leading-snug line-clamp-2 sm:line-clamp-none">
-                      {slide.description}
-                    </p>
-                  </div>
-
-                  {/* CTA Button */}
-                  <div className="pt-0.5 sm:pt-0">
-                    <Link
-                      href={slide.buttonHref}
-                      className="inline-flex items-center justify-center w-full px-2 py-1.5 sm:px-4 sm:py-2.5 bg-[#17472F] hover:bg-[#123825] text-white text-[9px] xs:text-[9.5px] sm:text-xs font-semibold tracking-wider uppercase rounded-full transition-colors shadow-xs active:scale-95"
-                    >
-                      <span>{slide.buttonLabel}</span>
-                      <span className="ml-1 sm:ml-1.5 text-xs">→</span>
-                    </Link>
-                  </div>
+              {/* Badge 2: Brand Customization */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <div className="leading-tight">
+                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Brand</div>
+                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Customization</div>
                 </div>
-              );
-            })}
+              </div>
+
+              {/* Badge 3: Premium Quality */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <div className="leading-tight">
+                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Premium</div>
+                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Quality</div>
+                </div>
+              </div>
+
+              {/* Badge 4: Nationwide Delivery */}
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
+                <div className="leading-tight">
+                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Nationwide</div>
+                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Delivery</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Carousel Navigation Arrows (Desktop & Tablet only to prevent mobile overlap) */}
-        <button
-          type="button"
-          onClick={prevSlide}
-          aria-label="Previous Slide"
-          className="hidden md:flex absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#FAF7F0]/90 hover:bg-[#FAF7F0] text-[#17472F] border border-[#E4DCCF] items-center justify-center shadow-xs transition-colors cursor-pointer"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={nextSlide}
-          aria-label="Next Slide"
-          className="hidden md:flex absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-[#FAF7F0]/90 hover:bg-[#FAF7F0] text-[#17472F] border border-[#E4DCCF] items-center justify-center shadow-xs transition-colors cursor-pointer"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        {/* Pagination Dots - Positioned Bottom-Left on Mobile to avoid any card overlap */}
-        <div className="absolute bottom-2.5 sm:bottom-5 left-3.5 sm:left-1/2 sm:-translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2.5">
-          {SLIDES.map((slide, idx) => (
-            <button
-              key={`dot-${slide.id}`}
-              type="button"
-              onClick={() => setCurrentSlide(idx)}
-              aria-label={`Go to slide ${idx + 1}`}
-              className={`transition-all duration-300 rounded-full cursor-pointer ${idx === currentSlide
-                ? "w-6 sm:w-8 h-1.5 sm:h-2.5 bg-[#A47A3C]"
-                : "w-1.5 sm:w-2.5 h-1.5 sm:h-2.5 bg-black/30 hover:bg-black/50"
-                }`}
-            />
-          ))}
-        </div>
-      </div>
     </section>
   );
 }
-
