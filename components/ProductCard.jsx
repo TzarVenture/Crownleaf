@@ -1,85 +1,109 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function ProductCard({ product }) {
-  const imageSrc = product.images && product.images.length > 0 ? product.images[0].src : null;
+/**
+ * Compact, End-to-End Product Card Component
+ *
+ * Requirements:
+ * 1. Product image displayed end-to-end (full-bleed, edge-to-edge)
+ * 2. No hover animations / scale effects (calm, static luxury)
+ * 3. Compact padding and typography for streamlined scanning
+ * 4. 2-line clamped title with strike-through MRP
+ */
+export default function ProductCard({
+  product,
+  aspectRatio = "aspect-square",
+  className = "",
+}) {
+  if (!product) return null;
+
+  const imageSrc =
+    product.images && product.images.length > 0 ? product.images[0].src : null;
   const isInStock = product.stock_status === "instock";
-  const categoryName =
-    product.categories && product.categories.length > 0 ? product.categories[0].name : "Corporate Gift";
+  const slug = product.slug || "";
+
+  // Price & MRP formatting
+  const rawPrice = product.price ? parseFloat(product.price) : null;
+  const rawRegularPrice = product.regular_price
+    ? parseFloat(product.regular_price)
+    : null;
+
+  const formattedPrice =
+    rawPrice !== null
+      ? `₹${rawPrice.toLocaleString("en-IN")}`
+      : "Price On Request";
+
+  const showMrp =
+    rawRegularPrice !== null &&
+    rawPrice !== null &&
+    rawRegularPrice > rawPrice;
+
+  const formattedMrp = showMrp
+    ? `₹${rawRegularPrice.toLocaleString("en-IN")}`
+    : null;
 
   return (
-    <article className="group bg-white rounded-2xl border border-[#E2D9CF] shadow-xs hover:shadow-lg hover:border-[#D1B2B2] transition-all duration-300 overflow-hidden flex flex-col">
-      {/* Product Image Showcase Stage */}
-      <div className="relative aspect-4/3 w-full bg-[#FAF8F5] overflow-hidden flex items-center justify-center p-6 border-b border-[#E2D9CF]/60">
-        {imageSrc ? (
-          <Image
-            src={imageSrc}
-            alt={product.name}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="text-slate-400 text-xs uppercase tracking-wider font-medium">Image Not Available</div>
-        )}
-
-        {/* Minimalist Stock Pill (No Emojis, No Pulsing Dots) */}
-        <div className="absolute top-3 left-3">
-          <span
-            className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-              isInStock
-                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                : "bg-stone-100 text-stone-600 border border-stone-200"
-            }`}
-          >
-            {isInStock ? "In Stock" : "Sold Out"}
-          </span>
-        </div>
-
-        {/* Optional SKU Tag */}
-        {product.sku && (
-          <div className="absolute top-3 right-3 text-[10px] font-mono text-slate-400 bg-white/90 px-2 py-0.5 rounded border border-[#E2D9CF]">
-            SKU: {product.sku}
-          </div>
-        )}
-      </div>
-
-      {/* Product Metadata & Content */}
-      <div className="p-6 flex-1 flex flex-col justify-between">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.12em] font-bold text-[#A67D44] mb-1.5">
-            {categoryName}
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-[#003108] line-clamp-2 group-hover:text-[#A67D44] transition-colors leading-snug">
-            {product.name}
-          </h3>
-          {product.short_description && (
-            <div
-              className="mt-2 text-xs text-slate-500 line-clamp-2 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: product.short_description }}
+    <article
+      className={`h-full flex flex-col bg-transparent rounded-none overflow-hidden select-none ${className}`}
+    >
+      <Link
+        href={slug ? `/product/${slug}` : "#"}
+        className="flex flex-col h-full focus:outline-none focus-visible:ring-1 focus-visible:ring-[#A67D44]"
+      >
+        {/* 1. End-to-End Edge-to-Edge Image Stage (Borderless, sharp corners) */}
+        <div
+          className={`relative ${aspectRatio} w-full bg-[#FAF8F5] overflow-hidden shrink-0`}
+        >
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt={product.name || "CrownLeaf Corporate Gift"}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover"
             />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-400 text-[11px] uppercase tracking-wider font-medium">
+              Image Not Available
+            </div>
+          )}
+
+          {/* Minimalist Sold Out Indicator */}
+          {!isInStock && (
+            <div className="absolute top-2 left-2 z-10">
+              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-white/95 text-stone-700 border border-stone-200 shadow-2xs">
+                Sold Out
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Price & Action Trigger */}
-        <div className="pt-5 mt-5 border-t border-[#E2D9CF]/60 flex items-center justify-between">
+        {/* 2. Compact Content Stage: Title & Price */}
+        <div className="pt-2.5 sm:pt-3 pb-1 px-0.5 sm:px-1 flex-1 flex flex-col justify-between">
           <div>
-            <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-medium">
-              Unit Price
-            </span>
-            <div className="text-xl font-bold text-[#003108]">
-              {product.price ? `₹${product.price}` : "On Request"}
+            {/* Title clamped to max 2 lines with lighter, legible typography */}
+            <h3
+              title={product.name}
+              className="text-xs sm:text-sm font-medium text-stone-800 leading-snug line-clamp-2 h-[2.4rem] sm:h-[2.5rem] flex items-start"
+            >
+              {product.name}
+            </h3>
+
+            {/* Price with MRP strike-through directly below title in refined medium weight */}
+            <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-medium text-stone-900">
+                {formattedPrice}
+              </span>
+
+              {showMrp && (
+                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                  {formattedMrp}
+                </span>
+              )}
             </div>
           </div>
-
-          <Link
-            href={`/product/${product.slug}`}
-            className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#003108] text-white hover:bg-[#A67D44] transition-colors shadow-xs"
-          >
-            View Details
-          </Link>
         </div>
-      </div>
+      </Link>
     </article>
   );
 }

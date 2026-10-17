@@ -3,40 +3,42 @@ import Hero from "@/components/Hero";
 import ProductCard from "@/components/ProductCard";
 import CategoryShowcase from "@/components/CategoryShowcase";
 import OccasionShowcase from "@/components/OccasionShowcase";
+import Footer from "@/components/Footer";
 import { wcApi } from "@/lib/woocommerce";
 
 export const revalidate = 60; // Revalidate inventory cache every 60 seconds (ISR)
 
 async function getInventory() {
   try {
-    const [productsRes, categoriesRes] = await Promise.all([
+    const [corporateRes, drinkwareRes] = await Promise.all([
       wcApi.get("products", {
         status: "publish", // Mandatory rule: Published products only
-        per_page: 18,
+        per_page: 8,
       }),
-      wcApi.get("products/categories", {
-        hide_empty: true,
-        per_page: 10,
+      wcApi.get("products", {
+        category: "39", // Drinkware collection
+        status: "publish",
+        per_page: 8,
       }),
     ]);
 
     return {
-      products: productsRes.data || [],
-      categories: categoriesRes.data || [],
+      corporateProducts: corporateRes.data || [],
+      drinkwareProducts: drinkwareRes.data || [],
       error: null,
     };
   } catch (err) {
     console.error("WooCommerce API fetch error:", err?.response?.data || err?.message);
     return {
-      products: [],
-      categories: [],
+      corporateProducts: [],
+      drinkwareProducts: [],
       error: "Unable to retrieve real-time inventory from WooCommerce. Please try again shortly.",
     };
   }
 }
 
 export default async function HomePage() {
-  const { products, categories, error } = await getInventory();
+  const { corporateProducts, drinkwareProducts, error } = await getInventory();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
@@ -50,45 +52,15 @@ export default async function HomePage() {
         {/* Brand Highlights & Occasion Showcase */}
         <OccasionShowcase />
 
-        {/* Category Navigation Strip */}
-        {categories.length > 0 && (
-          <section id="categories" className="py-5 px-4 sm:px-6 lg:px-8 bg-white border-y border-[#E2D9CF]">
-            <div className="max-w-[1300px] mx-auto">
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-                <span className="text-[11px] uppercase tracking-wider font-bold text-slate-400 whitespace-nowrap mr-2">
-                  Category:
-                </span>
-                <span className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#003108] text-white whitespace-nowrap cursor-pointer shadow-xs">
-                  All ({products.length})
-                </span>
-                {categories.map((cat) => (
-                  <span
-                    key={cat.id}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#EFE8E0] hover:bg-[#D1B2B2]/40 text-[#003108] whitespace-nowrap cursor-pointer transition-colors"
-                  >
-                    {cat.name} ({cat.count})
-                  </span>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Live Product Showcase Grid */}
-        <section id="inventory" className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full">
-          {/* Section Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 pb-4 border-b border-[#E2D9CF] gap-4">
-            <div>
-              <span className="text-xs uppercase tracking-[0.16em] font-bold text-[#A67D44] block mb-1">
-                Verified Inventory
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#003108] tracking-tight">
-                Featured Corporate Gifts &amp; Hampers
-              </h2>
-            </div>
-            <div className="text-xs text-slate-500 font-medium bg-white px-3 py-1.5 rounded-md border border-[#E2D9CF]">
-              Showing {products.length} published products
-            </div>
+        {/* Section 1: Featured Corporate Gifts & Hampers */}
+        <section id="inventory" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full">
+          {/* Section Header with Flanking Architectural Hairlines */}
+          <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
+              Featured Corporate Gifts &amp; Hampers
+            </h2>
+            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
           </div>
 
           {/* Diagnostic Error Notice */}
@@ -97,33 +69,44 @@ export default async function HomePage() {
               <h3 className="font-bold text-sm uppercase tracking-wider mb-1">API Notice</h3>
               <p className="text-sm">{error}</p>
             </div>
-          ) : products.length === 0 ? (
+          ) : corporateProducts.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl border border-[#E2D9CF]">
               <p className="text-slate-500 text-sm font-medium">
                 No published products currently available in this collection.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products.map((product) => (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
+              {corporateProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
         </section>
+
+        {/* Section 2: Executive Drinkware & Desk Essentials */}
+        {drinkwareProducts.length > 0 && (
+          <section id="drinkware" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full border-t border-[#E2D9CF]/60">
+            {/* Section Header with Flanking Architectural Hairlines */}
+            <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+              <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
+                Executive Drinkware &amp; Desk Essentials
+              </h2>
+              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
+              {drinkwareProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#003108] text-white py-12 px-4 sm:px-6 lg:px-8 border-t border-black/20">
-        <div className="max-w-[1300px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white/70">
-          <div>
-            <span className="font-bold uppercase tracking-wider text-white">CrownLeaf Corporate Gifting</span> — Bespoke Corporate Hampers &amp; Executive Solutions Across India
-          </div>
-          <div>
-            &copy; {new Date().getFullYear()} CrownLeaf. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      {/* Comprehensive Atelier Footer with WhatsApp Float */}
+      <Footer />
     </div>
   );
 }

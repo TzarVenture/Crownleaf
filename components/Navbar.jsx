@@ -8,18 +8,31 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { cart, openCart } = useCart();
 
+  // Dynamically set --navbar-height CSS variable on root for pixel-perfect viewport height calculations
+  if (typeof window !== "undefined") {
+    const updateNavHeight = () => {
+      const header = document.getElementById("site-header");
+      if (header) {
+        document.documentElement.style.setProperty("--navbar-height", `${header.offsetHeight}px`);
+      }
+    };
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      updateNavHeight();
+    }
+  }
+
   return (
-    <header className="sticky top-0 z-40 w-full shadow-xs">
+    <header id="site-header" className="sticky top-0 z-40 w-full shadow-xs">
       {/* Top Announcement Bar */}
-      <div className="bg-[#003108] text-white text-xs py-2 px-4 border-b border-black/10">
-        <div className="max-w-[1300px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-1.5 text-center sm:text-left">
+      <div className="bg-[#003108] text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-4 border-b border-black/10">
+        <div className="max-w-[1300px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-1.5 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <span className="font-semibold tracking-wider uppercase text-[11px] text-[#A67D44]">
+            <span className="font-semibold tracking-wider uppercase text-[10.5px] sm:text-[11px] text-[#A67D44]">
               Corporate Service:
             </span>
             <span className="text-white/90">Bulk &amp; Custom Gifting Across India: +91 7760775875</span>
           </div>
-          <div className="text-white/80 tracking-wide">
+          <div className="text-white/80 tracking-wide hidden sm:block">
             Direct Inquiries:{" "}
             <a href="tel:+917304056607" className="underline hover:text-white transition-colors">
               +91 7304056607
@@ -34,7 +47,7 @@ export default function Navbar() {
 
       {/* Main Navigation Bar */}
       <nav className="bg-[#EFE8E0] border-b border-[#D1B2B2] relative">
-        <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Brand Logo */}
           <Link href="/" className="flex flex-col group">
             <span className="text-2xl sm:text-3xl font-extrabold tracking-[0.12em] text-[#003108] leading-none">
