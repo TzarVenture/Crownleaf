@@ -61,7 +61,7 @@ export default function Navbar() {
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#003108]">
             <Link
-              href="#inventory"
+              href="/products"
               className="hover:text-[#A67D44] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
             >
               Corporate Gifts
@@ -161,7 +161,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="sm:hidden bg-[#EFE8E0] border-t border-[#D1B2B2] px-4 pt-3 pb-6 space-y-3">
             <Link
-              href="#inventory"
+              href="/products"
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm font-semibold uppercase tracking-wider text-[#003108] py-2 border-b border-[#D1B2B2]/40"
             >
