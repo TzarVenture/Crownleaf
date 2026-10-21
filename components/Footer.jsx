@@ -7,12 +7,12 @@ import Link from "next/link";
 const LOGO_SRC = "https://crownleaf.co/wp-content/uploads/2026/07/Adshalaa_Logo-4.png";
 
 const COLLECTIONS_LINKS = [
-  { label: "Corporate Gifts", href: "https://crownleaf.co/product-category/welcome-kit/" },
-  { label: "Bulk Gifting", href: "https://crownleaf.co/bulk-enquiry/" },
-  { label: "Vegan Free", href: "https://crownleaf.co/product-category/vegan-free/" },
-  { label: "About Us", href: "https://crownleaf.co/about-us/" },
+  { label: "Corporate Gifts", href: "/products" },
+  { label: "Bulk Gifting", href: "/#enquiry" },
+  { label: "Vegan Free", href: "/products?category=vegan-free" },
+  { label: "About Us", href: "/#about" },
   { label: "Kids Gifting Solution", href: "https://titepo.com/return-gift/", isExternal: true },
-  { label: "Bulk Enquiry", href: "https://crownleaf.co/bulk-enquiry/" },
+  { label: "Bulk Enquiry", href: "/#enquiry" },
 ];
 
 const HELP_LINKS = [
