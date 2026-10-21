@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
 export default function ProductActions({ product }) {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState(() => {
     const initial = {};
@@ -58,7 +60,19 @@ export default function ProductActions({ product }) {
 
   const handleBuyNow = () => {
     if (!isInStock) return;
-    addToCart(product, quantity, selectedAttributes);
+    try {
+      sessionStorage.setItem(
+        "crownleaf_direct_checkout",
+        JSON.stringify({
+          product,
+          quantity,
+          selectedAttributes,
+        })
+      );
+    } catch (err) {
+      console.warn("Direct checkout storage notice:", err);
+    }
+    router.push(`/checkout?direct=1&id=${product.id}`);
   };
 
   return (

@@ -237,17 +237,13 @@ export default function CartDrawer() {
 
               {/* Checkout CTA Buttons */}
               <div className="space-y-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    alert(
-                      `Proceeding to checkout with ${cart.itemsCount} item(s) totalling ₹${totalFormatted}. Payment gateway integration will be connected in next phase.`
-                    );
-                  }}
+                <Link
+                  href="/checkout"
+                  onClick={closeCart}
                   className="w-full py-3.5 px-6 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] active:scale-[0.99] transition-all text-center shadow-xs block"
                 >
                   Proceed to Checkout &bull; ₹{totalFormatted}
-                </button>
+                </Link>
 
                 <button
                   type="button"
