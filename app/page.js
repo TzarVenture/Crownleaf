@@ -13,11 +13,13 @@ async function getInventory() {
     const [corporateRes, drinkwareRes] = await Promise.all([
       wcApi.get("products", {
         status: "publish", // Mandatory rule: Published products only
+        stock_status: "instock", // Strictly show in-stock products only
         per_page: 8,
       }),
       wcApi.get("products", {
         category: "39", // Drinkware collection
         status: "publish",
+        stock_status: "instock", // Strictly show in-stock products only
         per_page: 8,
       }),
     ]);

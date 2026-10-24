@@ -32,6 +32,7 @@ async function getRelatedProducts(categoryId, currentProductId) {
     const response = await wcApi.get("products", {
       category: categoryId,
       status: "publish",
+      stock_status: "instock", // Strictly in-stock products
       per_page: 4,
     });
     return (response.data || []).filter((p) => p.id !== currentProductId).slice(0, 3);
@@ -46,6 +47,7 @@ export async function generateStaticParams() {
   try {
     const response = await wcApi.get("products", {
       status: "publish",
+      stock_status: "instock", // Strictly in-stock products
       per_page: 20,
     });
     return (response.data || []).map((product) => ({

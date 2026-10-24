@@ -33,7 +33,6 @@ function ProductsCatalogContent() {
   const currentCategory = searchParams.get("category") || "all";
   const currentMinPrice = searchParams.get("min_price") || "";
   const currentMaxPrice = searchParams.get("max_price") || "";
-  const currentStock = searchParams.get("stock_status") || "";
   const currentSort = searchParams.get("sort") || "latest";
   const currentSearch = searchParams.get("search") || "";
   const currentPage = parseInt(searchParams.get("page") || "1", 10);
@@ -201,10 +200,9 @@ function ProductsCatalogContent() {
     let count = 0;
     if (currentCategory && currentCategory !== "all") count++;
     if (currentMinPrice || currentMaxPrice) count++;
-    if (currentStock) count++;
     if (currentSearch) count++;
     return count;
-  }, [currentCategory, currentMinPrice, currentMaxPrice, currentStock, currentSearch]);
+  }, [currentCategory, currentMinPrice, currentMaxPrice, currentSearch]);
 
   // Clear all filters
   const handleClearAll = () => {
@@ -265,18 +263,6 @@ function ProductsCatalogContent() {
               </span>
             )}
 
-            {currentStock && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-stone-100 text-stone-800 rounded text-xs">
-                <span>In Stock Only</span>
-                <button
-                  type="button"
-                  onClick={() => updateQuery({ stock_status: null })}
-                  className="hover:text-red-600 font-bold ml-0.5"
-                >
-                  ✕
-                </button>
-              </span>
-            )}
 
             {currentSearch && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-stone-100 text-stone-800 rounded text-xs">
@@ -438,23 +424,6 @@ function ProductsCatalogContent() {
         </form>
       </div>
 
-      {/* 3. Availability Filter */}
-      <div className="pt-4 border-t border-stone-200">
-        <h3 className="text-[11px] font-bold uppercase tracking-wider text-stone-900 mb-2.5">
-          Availability
-        </h3>
-        <label className="flex items-center gap-2 text-xs text-stone-700 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={currentStock === "instock"}
-            onChange={(e) =>
-              updateQuery({ stock_status: e.target.checked ? "instock" : null })
-            }
-            className="w-3.5 h-3.5 text-stone-900 border-stone-300 rounded focus:ring-0 cursor-pointer"
-          />
-          <span>In Stock Only</span>
-        </label>
-      </div>
     </div>
   );
 

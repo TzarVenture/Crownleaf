@@ -17,6 +17,7 @@ export async function GET(request) {
     // Build WooCommerce REST API v3 query parameters
     const params = {
       status: "publish", // Mandatory: only show published products
+      stock_status: "instock", // Strictly show in-stock products only
       per_page: perPage,
       page: Math.max(1, page),
     };

@@ -19,7 +19,6 @@ export default function ProductCard({
 
   const imageSrc =
     product.images && product.images.length > 0 ? product.images[0].src : null;
-  const isInStock = product.stock_status === "instock";
   const slug = product.slug || "";
 
   // Price & MRP formatting
@@ -65,15 +64,6 @@ export default function ProductCard({
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-[11px] uppercase tracking-wider font-medium">
               Image Not Available
-            </div>
-          )}
-
-          {/* Minimalist Sold Out Indicator */}
-          {!isInStock && (
-            <div className="absolute top-2 left-2 z-10">
-              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-white/95 text-stone-700 border border-stone-200 shadow-2xs">
-                Sold Out
-              </span>
             </div>
           )}
         </div>
