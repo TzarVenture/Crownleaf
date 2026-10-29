@@ -3,6 +3,8 @@ import Hero from "@/components/Hero";
 import ProductCard from "@/components/ProductCard";
 import CategoryShowcase from "@/components/CategoryShowcase";
 import OccasionShowcase from "@/components/OccasionShowcase";
+import BrandFeatureSection from "@/components/BrandFeatureSection";
+import CategoryBentoGrid from "@/components/CategoryBentoGrid";
 import Footer from "@/components/Footer";
 import { wcApi } from "@/lib/woocommerce";
 
@@ -14,7 +16,7 @@ async function getInventory() {
       wcApi.get("products", {
         status: "publish", // Mandatory rule: Published products only
         stock_status: "instock", // Strictly show in-stock products only
-        per_page: 8,
+        per_page: 12,
       }),
       wcApi.get("products", {
         category: "39", // Drinkware collection
@@ -42,6 +44,14 @@ async function getInventory() {
 export default async function HomePage() {
   const { corporateProducts, drinkwareProducts, error } = await getInventory();
 
+  // First 8 in-stock products displayed in Section 1 (Featured Corporate Gifts)
+  const inventoryProducts = corporateProducts.slice(0, 8);
+  // Dedicated in-stock products displayed in the Brand Feature Section
+  const featureProducts =
+    corporateProducts.length >= 12
+      ? corporateProducts.slice(8, 12)
+      : corporateProducts.slice(0, 4);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
       <Navbar />
@@ -67,24 +77,27 @@ export default async function HomePage() {
 
           {/* Diagnostic Error Notice */}
           {error ? (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-800">
+            <div className="p-6 bg-red-50 border border-red-200 rounded-none text-red-800">
               <h3 className="font-bold text-sm uppercase tracking-wider mb-1">API Notice</h3>
               <p className="text-sm">{error}</p>
             </div>
-          ) : corporateProducts.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl border border-[#E2D9CF]">
+          ) : inventoryProducts.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-none border border-[#E2D9CF]">
               <p className="text-slate-500 text-sm font-medium">
                 No published products currently available in this collection.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
-              {corporateProducts.map((product) => (
+              {inventoryProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
         </section>
+
+        {/* Brand Feature & Product Showcase (Positioned directly below Featured Corporate Gifts) */}
+        <BrandFeatureSection products={featureProducts} />
 
         {/* Section 2: Executive Drinkware & Desk Essentials */}
         {drinkwareProducts.length > 0 && (
@@ -105,6 +118,9 @@ export default async function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Product Categories Bento Grid (Positioned directly above the Footer) */}
+        <CategoryBentoGrid />
       </main>
 
       {/* Comprehensive Atelier Footer with WhatsApp Float */}
