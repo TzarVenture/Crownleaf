@@ -63,9 +63,8 @@ export default function ProductCard({
                 alt={product.name || "CrownLeaf Corporate Gift"}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className={`object-cover transition-opacity duration-500 ease-in-out ${
-                  secondaryImage ? "group-hover:opacity-0" : ""
-                }`}
+                className={`object-cover transition-all duration-700 ease-out group-hover:scale-[1.03] ${secondaryImage ? "group-hover:opacity-0" : ""
+                  }`}
               />
 
               {/* Secondary Image on Hover (from gallery) */}
@@ -75,7 +74,7 @@ export default function ProductCard({
                   alt={`${product.name || "CrownLeaf Corporate Gift"} - Alternate view`}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-in-out pointer-events-none"
+                  className="object-cover opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out group-hover:scale-[1.03] pointer-events-none"
                 />
               )}
             </>
@@ -92,7 +91,7 @@ export default function ProductCard({
             {/* Title clamped to max 2 lines with lighter, legible typography */}
             <h3
               title={product.name}
-              className="text-xs sm:text-sm font-medium text-stone-800 leading-snug line-clamp-2 h-[2.4rem] sm:h-[2.5rem] flex items-start"
+              className="text-xs sm:text-sm font-medium text-stone-800 group-hover:text-[#A67D44] leading-snug line-clamp-2 h-[2.4rem] sm:h-[2.5rem] flex items-start transition-colors duration-200"
             >
               {product.name}
             </h3>
