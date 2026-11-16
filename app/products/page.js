@@ -39,19 +39,33 @@ function ProductsCatalogContent() {
 
   // Local state
   const [categories, setCategories] = useState([]);
+  const [allProductsCount, setAllProductsCount] = useState(null);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  const [products, setProducts] = useState([]);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [productsLoading, setProductsLoading] = useState(true);
+  // Results are stored together with the query they belong to, so "loading" is simply
+  // "the results on screen are for an older query".
+  const queryKey = searchParams.toString();
+  const [result, setResult] = useState({ key: null, products: [], total: 0, totalPages: 1, failed: false });
+  const productsLoading = result.key !== queryKey;
+  const { products, total: totalProducts, totalPages } = result;
 
-  // Search input local state for debouncing
+  // Search and price boxes are editable drafts. They reset whenever the URL changes
+  // (state adjusted while rendering, the React-recommended pattern for this).
   const [searchInput, setSearchInput] = useState(currentSearch);
+  const [syncedSearch, setSyncedSearch] = useState(currentSearch);
+  if (syncedSearch !== currentSearch) {
+    setSyncedSearch(currentSearch);
+    setSearchInput(currentSearch);
+  }
 
-  // Custom price input local state
   const [customMin, setCustomMin] = useState(currentMinPrice);
   const [customMax, setCustomMax] = useState(currentMaxPrice);
+  const [syncedPrice, setSyncedPrice] = useState(`${currentMinPrice}|${currentMaxPrice}`);
+  if (syncedPrice !== `${currentMinPrice}|${currentMaxPrice}`) {
+    setSyncedPrice(`${currentMinPrice}|${currentMaxPrice}`);
+    setCustomMin(currentMinPrice);
+    setCustomMax(currentMaxPrice);
+  }
 
   // Mobile filter drawer state
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -64,6 +78,7 @@ function ProductsCatalogContent() {
         if (res.ok) {
           const data = await res.json();
           setCategories(data.categories || []);
+          setAllProductsCount(data.totalProducts || null);
         }
       } catch (err) {
         console.error("Failed to load WooCommerce categories:", err);
@@ -97,40 +112,34 @@ function ProductsCatalogContent() {
     [router, searchParams]
   );
 
-  // Fetch Products from WooCommerce API whenever URL parameters change
+  // Fetch products from WooCommerce whenever the URL parameters change
   useEffect(() => {
     let ignore = false;
-    setProductsLoading(true);
 
     async function loadProducts() {
-      try {
-        const params = new URLSearchParams(searchParams.toString());
-        if (!params.has("per_page")) {
-          params.set("per_page", "18");
-        }
+      const params = new URLSearchParams(queryKey);
+      if (!params.has("per_page")) {
+        params.set("per_page", "18");
+      }
 
+      try {
         const res = await fetch(`/api/products?${params.toString()}`);
         if (!res.ok) {
           throw new Error("Failed to load products");
         }
-
         const data = await res.json();
         if (!ignore) {
-          setProducts(data.products || []);
-          setTotalProducts(data.total || 0);
-          setTotalPages(data.totalPages || 1);
+          setResult({
+            key: queryKey,
+            products: data.products || [],
+            total: data.total || 0,
+            totalPages: data.totalPages || 1,
+            failed: false,
+          });
         }
       } catch (err) {
         console.error("Failed to load products:", err);
-        if (!ignore) {
-          setProducts([]);
-          setTotalProducts(0);
-          setTotalPages(1);
-        }
-      } finally {
-        if (!ignore) {
-          setProductsLoading(false);
-        }
+        if (!ignore) setResult({ key: queryKey, products: [], total: 0, totalPages: 1, failed: true });
       }
     }
 
@@ -138,18 +147,7 @@ function ProductsCatalogContent() {
     return () => {
       ignore = true;
     };
-  }, [searchParams]);
-
-  // Keep search input synced with URL
-  useEffect(() => {
-    setSearchInput(currentSearch);
-  }, [currentSearch]);
-
-  // Keep custom price inputs synced with URL
-  useEffect(() => {
-    setCustomMin(currentMinPrice);
-    setCustomMax(currentMaxPrice);
-  }, [currentMinPrice, currentMaxPrice]);
+  }, [queryKey]);
 
   // Handle live search submission
   const handleSearchSubmit = (e) => {
@@ -210,9 +208,12 @@ function ProductsCatalogContent() {
   };
 
   // -------------------------------------------------------------
-  // Filter Sidebar Content (Shared between desktop and mobile)
+  // Filter sidebar content (shared between desktop and mobile).
+  // This is a render function that is *called*, not a component rendered with <Component />.
+  // Defining a component inside another component made React rebuild the sidebar on every
+  // keystroke, so the price boxes lost focus after each character.
   // -------------------------------------------------------------
-  const FilterSidebarContent = () => (
+  const renderFilters = () => (
     <div className="space-y-6">
       {/* Active Filters Summary */}
       {activeFiltersCount > 0 && (
@@ -224,7 +225,7 @@ function ProductsCatalogContent() {
             <button
               type="button"
               onClick={handleClearAll}
-              className="text-[11px] text-[#A67D44] hover:text-[#8E6935] font-semibold underline"
+              className="text-[11px] text-[#8E6935] hover:text-[#8E6935] font-semibold underline"
             >
               Clear All
             </button>
@@ -305,7 +306,7 @@ function ProductsCatalogContent() {
                   : "text-stone-400"
               }`}
             >
-              204
+              {allProductsCount ?? ""}
             </span>
           </button>
 
@@ -431,7 +432,7 @@ function ProductsCatalogContent() {
     <div className="min-h-screen bg-white text-stone-900 flex flex-col justify-between">
       <Navbar />
 
-      <main className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 w-full">
+      <main id="main-content" className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-20 w-full">
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className="text-xs text-stone-500 mb-5 flex items-center gap-1.5">
           <Link href="/" className="hover:underline text-stone-600">
@@ -452,10 +453,10 @@ function ProductsCatalogContent() {
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-6 border-b border-stone-200">
           <div>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#A67D44]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8E6935]">
               Corporate Catalog
             </span>
-            <h1 className="text-2xl sm:text-3xl font-serif text-stone-900 mt-1 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#003108] mt-1 tracking-tight">
               {activeCategoryTitle}
             </h1>
             <p className="text-xs text-stone-500 mt-1 max-w-xl">
@@ -498,7 +499,7 @@ function ProductsCatalogContent() {
           {/* LEFT SIDE: Desktop Filter Sidebar (Sticky)               */}
           {/* ======================================================== */}
           <aside className="hidden lg:block lg:col-span-3 bg-white border border-stone-200 rounded-none p-5 shadow-2xs sticky top-28">
-            <FilterSidebarContent />
+            {renderFilters()}
           </aside>
 
           {/* ======================================================== */}
@@ -572,18 +573,20 @@ function ProductsCatalogContent() {
             ) : products.length === 0 ? (
               /* Empty State */
               <div className="border border-stone-200 rounded p-12 text-center my-6">
-                <h3 className="text-base font-serif text-stone-900 mb-1">
-                  No products found
+                <h3 className="text-base font-bold text-[#003108] mb-1">
+                  {result.failed ? "We couldn't load the products" : "No products found"}
                 </h3>
-                <p className="text-xs text-stone-500 max-w-sm mx-auto mb-5">
-                  We couldn&apos;t find any items matching your selected criteria. Try adjusting your filters.
+                <p className="text-xs text-stone-600 max-w-sm mx-auto mb-5">
+                  {result.failed
+                    ? "Something went wrong while loading the catalogue. Please try again in a moment."
+                    : "We couldn't find any items matching your selected criteria. Try adjusting your filters."}
                 </p>
                 <button
                   type="button"
-                  onClick={handleClearAll}
-                  className="px-6 py-2.5 bg-[#A67D44] hover:bg-[#8E6935] text-white text-xs font-semibold rounded transition"
+                  onClick={result.failed ? () => window.location.reload() : handleClearAll}
+                  className="px-6 py-2.5 bg-[#8E6935] hover:bg-[#7A5A2D] text-white text-xs font-semibold rounded transition"
                 >
-                  Reset Filters
+                  {result.failed ? "Try Again" : "Reset Filters"}
                 </button>
               </div>
             ) : (
@@ -683,14 +686,14 @@ function ProductsCatalogContent() {
                 </button>
               </div>
 
-              <FilterSidebarContent />
+              {renderFilters()}
             </div>
 
             <div className="pt-4 border-t border-stone-200 mt-6">
               <button
                 type="button"
                 onClick={() => setMobileFilterOpen(false)}
-                className="w-full py-2.5 bg-[#A67D44] hover:bg-[#8E6935] text-white text-xs font-semibold rounded transition"
+                className="w-full py-2.5 bg-[#8E6935] hover:bg-[#7A5A2D] text-white text-xs font-semibold rounded transition"
               >
                 View {totalProducts} Solutions
               </button>

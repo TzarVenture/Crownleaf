@@ -4,21 +4,14 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 export default function CartDrawer() {
-  const { cart, isDrawerOpen, closeCart, updateQuantity, removeItem, isLoading } = useCart();
+  const { cart, isDrawerOpen, closeCart, updateQuantity, removeItem, isLoading, errorNotice, clearError } = useCart();
   const drawerRef = useRef(null);
 
-  // Close on Escape key
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === "Escape" && isDrawerOpen) {
-        closeCart();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isDrawerOpen, closeCart]);
+  // Keep keyboard focus inside the drawer while it is open; Escape closes it
+  useFocusTrap(drawerRef, isDrawerOpen, closeCart);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -82,6 +75,22 @@ export default function CartDrawer() {
 
           {/* Drawer Body: Line Items or Empty State */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {errorNotice && (
+              <div
+                role="alert"
+                className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start justify-between gap-3"
+              >
+                <span>{errorNotice}</span>
+                <button
+                  type="button"
+                  onClick={clearError}
+                  className="font-bold uppercase tracking-wider text-[10px] shrink-0"
+                  aria-label="Dismiss message"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
             {hasItems ? (
               <div className="divide-y divide-[#E2D9CF]/60">
                 {cart.items.map((item) => {
@@ -115,7 +124,7 @@ export default function CartDrawer() {
                               <Link
                                 href={item.permalink}
                                 onClick={closeCart}
-                                className="hover:text-[#A67D44] transition-colors"
+                                className="hover:text-[#8E6935] transition-colors"
                               >
                                 {item.name}
                               </Link>
@@ -240,7 +249,7 @@ export default function CartDrawer() {
                 <Link
                   href="/checkout"
                   onClick={closeCart}
-                  className="w-full py-3.5 px-6 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] active:scale-[0.99] transition-all text-center shadow-xs block"
+                  className="w-full py-3.5 px-6 rounded-lg text-xs font-bold uppercase tracking-wider bg-[#8E6935] text-white hover:bg-[#7A5A2D] active:scale-[0.99] transition-all text-center shadow-xs block"
                 >
                   Proceed to Checkout &bull; ₹{totalFormatted}
                 </Link>

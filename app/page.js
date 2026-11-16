@@ -7,6 +7,7 @@ import BrandFeatureSection from "@/components/BrandFeatureSection";
 import CategoryBentoGrid from "@/components/CategoryBentoGrid";
 import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
+import OccasionEnquiryForm from "@/components/OccasionEnquiryForm";
 import { wcApi } from "@/lib/woocommerce";
 
 export const revalidate = 60; // Revalidate inventory cache every 60 seconds (ISR)
@@ -56,7 +57,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
       <Navbar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <Hero />
 
         {/* Curated Category Showcase */}
@@ -126,6 +127,9 @@ export default async function HomePage() {
 
         {/* Product Categories Bento Grid (Positioned directly above the Footer) */}
         <CategoryBentoGrid />
+
+        {/* Bulk / corporate enquiry: target of every "Request Quote" and "Bulk Enquiry" link */}
+        <OccasionEnquiryForm />
       </main>
 
       {/* Comprehensive Atelier Footer with WhatsApp Float */}

@@ -8,7 +8,7 @@ const CATEGORIES = [
     titleLine1: "WELCOME KITS &",
     titleLine2: "ONBOARDING",
     image: "https://crownleaf.co/wp-content/uploads/2026/02/Customized-Employee-Welcome-kit.webp",
-    href: "#inventory",
+    href: "/products?category=welcome-kit",
     tag: "Welcome Kit",
   },
   {
@@ -16,7 +16,7 @@ const CATEGORIES = [
     titleLine1: "EXECUTIVE &",
     titleLine2: "CLIENT GIFTS",
     image: "https://crownleaf.co/wp-content/uploads/2026/02/luxury-business-corporate-gift-set-with-customized-logo.jpg",
-    href: "#inventory",
+    href: "/products?category=executive-gifts",
     tag: "Executive Gifts",
   },
   {
@@ -24,7 +24,7 @@ const CATEGORIES = [
     titleLine1: "WELLNESS &",
     titleLine2: "SCENTED HAMPERS",
     image: "https://crownleaf.co/wp-content/uploads/2026/02/No_Respansabilities_1b28863f-8fe2-4a61-9c34-2a80329e1000_480x480.webp",
-    href: "#inventory",
+    href: "/products?category=client-gifts",
     tag: "Client Gifts",
   },
   {
@@ -32,7 +32,7 @@ const CATEGORIES = [
     titleLine1: "FESTIVE &",
     titleLine2: "CELEBRATION BOXES",
     image: "https://crownleaf.co/wp-content/uploads/2026/02/corporate-holiday-gift-ideas-chocolate-scaled.jpg",
-    href: "#inventory",
+    href: "/products?category=employee-gifts",
     tag: "Employee Gifts",
   },
   {
@@ -40,7 +40,7 @@ const CATEGORIES = [
     titleLine1: "DRINKWARE &",
     titleLine2: "VACUUM FLASKS",
     image: "https://crownleaf.co/wp-content/uploads/2026/08/Crown-A1.jpg.jpeg",
-    href: "#inventory",
+    href: "/products?category=drinkware",
     tag: "Drinkware",
   },
 ];

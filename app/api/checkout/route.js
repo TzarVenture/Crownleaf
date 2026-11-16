@@ -1,196 +1,234 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { wcApi } from "@/lib/woocommerce";
+import { WP_URL } from "@/lib/site";
+import { INDIAN_STATES, INDIAN_STATE_CODES } from "@/lib/states";
+import { getShippingOptions } from "@/lib/shipping";
+import { validateCoupon } from "@/lib/coupons";
+import { applyCartSession, readCartSession, storeFetch } from "@/lib/storeApi";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import { clean, isEmail, isGstin, isPinCode, normalizeIndianPhone, stripHtml } from "@/lib/validation";
 
-import { INDIAN_STATES } from "@/lib/states";
-export { INDIAN_STATES };
+const MAX_ITEMS = 50;
+const MAX_QTY = 9999;
 
-// GET: Retrieve Indian states & validate single product if requested
+const fail = (message, status = 400, extra = {}) => NextResponse.json({ error: message, ...extra }, { status });
+
+// GET: states, live shipping options and (optionally) one published product
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const productId = searchParams.get("productId");
+    const productId = Number.parseInt(searchParams.get("productId") || "", 10);
 
+    const shipping = await getShippingOptions();
     let product = null;
-    if (productId) {
-      const res = await wcApi.get(`products/${productId}`, {
-        status: "publish", // Mandatory rule: Published only
-      });
-      product = res.data || null;
+
+    if (Number.isInteger(productId) && productId > 0) {
+      // GET /products/{id} ignores the status filter and would return drafts, so use the list
+      // endpoint, which honours `status: "publish"` (mandatory rule: published products only).
+      const res = await wcApi.get("products", { include: String(productId), status: "publish", per_page: 1 });
+      product = res.data?.[0] || null;
+      if (!product) return fail("Product not found.", 404, { states: INDIAN_STATES, shipping });
     }
 
-    return NextResponse.json({
-      states: INDIAN_STATES,
-      product,
-    });
+    return NextResponse.json({ states: INDIAN_STATES, shipping, product });
   } catch (err) {
     console.error("Error in GET /api/checkout:", err?.response?.data || err.message);
-    return NextResponse.json(
-      {
-        states: INDIAN_STATES,
-        error: "Failed to validate product with WooCommerce",
-      },
-      { status: 500 }
-    );
+    return fail("Unable to load checkout details right now.", 502, { states: INDIAN_STATES });
   }
 }
 
-// POST: Create an official order in WooCommerce
-export async function POST(request) {
-  try {
-    const body = await request.json();
-    const {
-      mode = "cart",
-      billing,
-      shipping,
-      items,
-      paymentMethod = "bacs",
-      paymentMethodTitle = "Direct Bank Transfer / NEFT / RTGS",
-      customerNote = "",
-    } = body;
+// Check every requested line against WooCommerce and return trusted lines + subtotal.
+async function verifyItems(rawItems) {
+  const items = rawItems.map((it) => ({
+    productId: Number.parseInt(it?.productId ?? it?.id, 10),
+    variationId: Number.parseInt(it?.variationId, 10) || 0,
+    quantity: Number.parseInt(it?.quantity, 10),
+  }));
 
-    const rawItems = body.items || body.line_items || [];
-    const shippingOption = body.shippingOption || "standard";
-    const couponCode = body.couponCode || null;
+  if (items.some((it) => !Number.isInteger(it.productId) || it.productId < 1 || !Number.isInteger(it.quantity) || it.quantity < 1 || it.quantity > MAX_QTY)) {
+    return { error: "Your cart contains an invalid item. Please review your bag." };
+  }
 
-    // 1. Validation
-    if (!billing?.email || !billing?.phone || !billing?.firstName || !billing?.address1 || !billing?.city || !billing?.postcode) {
-      return NextResponse.json(
-        { error: "Please provide all required billing and contact details." },
-        { status: 400 }
-      );
+  const ids = [...new Set(items.map((it) => it.productId))];
+  const productsRes = await wcApi.get("products", { include: ids.join(","), status: "publish", per_page: 100 });
+  const products = new Map((productsRes.data || []).map((p) => [p.id, p]));
+
+  const lines = [];
+  let subtotal = 0;
+
+  for (const it of items) {
+    const product = products.get(it.productId);
+    if (!product) return { error: "One of the products in your bag is no longer available." };
+    if (!product.purchasable || !product.price) {
+      return { error: `"${stripHtml(product.name)}" is available on request only. Please send us a quote request.` };
+    }
+    if (product.stock_status !== "instock") return { error: `"${stripHtml(product.name)}" is out of stock.` };
+
+    let unitPrice = Number.parseFloat(product.price);
+    let variationId = 0;
+
+    if (product.type === "variable") {
+      if (!it.variationId) return { error: `Please choose options for "${stripHtml(product.name)}".` };
+      const vRes = await wcApi.get(`products/${product.id}/variations/${it.variationId}`);
+      const variation = vRes.data;
+      if (!variation || !variation.purchasable || variation.stock_status !== "instock") {
+        return { error: `The selected option of "${stripHtml(product.name)}" is not available.` };
+      }
+      variationId = variation.id;
+      unitPrice = Number.parseFloat(variation.price);
     }
 
-    if (!rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
-      return NextResponse.json(
-        { error: "No items provided for checkout." },
-        { status: 400 }
-      );
+    if (product.manage_stock && product.stock_quantity != null && it.quantity > product.stock_quantity) {
+      return { error: `Only ${product.stock_quantity} of "${stripHtml(product.name)}" are available.` };
     }
 
-    // 2. Format Line Items for WooCommerce REST API v3
-    const lineItems = rawItems.map((item) => {
-      const productId = parseInt(item.product_id || item.id, 10);
-      const formatted = {
-        product_id: productId,
-        quantity: parseInt(item.quantity, 10) || 1,
-      };
-
-      if (item.variationId || item.variation_id) {
-        formatted.variation_id = parseInt(item.variationId || item.variation_id, 10);
-      }
-
-      // Preserve chosen attributes (Color, Size, Custom Branding, etc.) in line item metadata
-      if (item.variation && Array.isArray(item.variation) && item.variation.length > 0) {
-        formatted.meta_data = item.variation.map((v) => ({
-          key: v.attribute || v.name || "Option",
-          value: v.value || v.option || "",
-        }));
-      } else if (item.variation && typeof item.variation === "object") {
-        formatted.meta_data = Object.entries(item.variation).map(([k, v]) => ({
-          key: k,
-          value: String(v),
-        }));
-      }
-
-      return formatted;
+    subtotal += unitPrice * it.quantity;
+    lines.push({
+      product_id: product.id,
+      quantity: it.quantity,
+      ...(variationId ? { variation_id: variationId } : {}),
     });
+  }
 
-    // 3. Construct Order Payload for WooCommerce REST API v3
-    const ship = shipping || billing;
+  return { lines, subtotal };
+}
+
+// POST: create the WooCommerce order and hand the shopper to WooCommerce's secure payment page
+export async function POST(request) {
+  // Loose limit on every attempt (typos and retries are fine); the strict limit on real order
+  // creation is applied below, after the request has passed validation.
+  const ip = getClientIp(request);
+  const attempts = rateLimit(`checkout-attempt:${ip}`, { limit: 60, windowMs: 10 * 60_000 });
+  if (!attempts.ok) return tooManyRequests(attempts.retryAfter);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return fail("Invalid request.");
+  }
+
+  // Honeypot: real visitors never fill this hidden field.
+  if (clean(body?.website)) return fail("Unable to place your order.");
+
+  // --- Validate contact and address ---------------------------------------------------------
+  const b = body?.billing || {};
+  const phone = normalizeIndianPhone(clean(b.phone, 20));
+  const errors = {};
+  if (!clean(b.firstName, 60)) errors.firstName = "Please enter your first name.";
+  if (!isEmail(clean(b.email, 254))) errors.email = "Please enter a valid email address.";
+  if (!phone) errors.phone = "Please enter a valid 10-digit mobile number.";
+  if (!clean(b.address1, 200)) errors.address1 = "Please enter your delivery address.";
+  if (!clean(b.city, 80)) errors.city = "Please enter your city.";
+  if (!INDIAN_STATE_CODES.has(b.state)) errors.state = "Please choose a valid state.";
+  if (!isPinCode(clean(b.postcode, 10))) errors.postcode = "Please enter a valid 6-digit PIN code.";
+  if (clean(b.gstin, 20) && !isGstin(clean(b.gstin, 20))) errors.gstin = "Please enter a valid 15-character GSTIN, or leave it blank.";
+  const firstError = Object.values(errors)[0];
+  if (firstError) return fail(firstError, 400, { fields: errors });
+
+  const rawItems = Array.isArray(body?.items) ? body.items : [];
+  if (rawItems.length === 0) return fail("Your bag is empty.");
+  if (rawItems.length > MAX_ITEMS) return fail("Too many items in one order. Please contact us for a bulk order.");
+
+  // Strict limit: at most 6 orders per client per 10 minutes
+  const orders = rateLimit(`checkout-order:${ip}`, { limit: 6, windowMs: 10 * 60_000 });
+  if (!orders.ok) return tooManyRequests(orders.retryAfter);
+
+  try {
+    // --- Verify products against WooCommerce (never trust client prices) --------------------
+    const verified = await verifyItems(rawItems);
+    if (verified.error) return fail(verified.error);
+
+    // --- Shipping and coupon, both from WooCommerce ------------------------------------------
+    const shippingOptions = await getShippingOptions();
+    const shippingChoice = body?.shippingOption === "express" ? shippingOptions.express : shippingOptions.standard;
+    let shippingCost = shippingChoice.cost;
+
+    const couponCode = clean(body?.couponCode, 40);
+    let coupon = null;
+    if (couponCode) {
+      const result = await validateCoupon(couponCode, verified.subtotal);
+      if (!result.ok) return fail(result.message);
+      coupon = result.coupon;
+      if (coupon.freeShipping) shippingCost = 0;
+    }
+
+    // --- Create the order ------------------------------------------------------------------
+    const mode = body?.mode === "direct" ? "direct" : "cart";
+    const address = {
+      first_name: clean(b.firstName, 60),
+      last_name: clean(b.lastName, 60),
+      company: clean(b.company, 100),
+      address_1: clean(b.address1, 200),
+      address_2: clean(b.address2, 200),
+      city: clean(b.city, 80),
+      state: b.state,
+      postcode: clean(b.postcode, 10),
+      country: "IN",
+    };
+
     const orderData = {
       status: "pending",
-      payment_method: paymentMethod,
-      payment_method_title: paymentMethodTitle,
+      payment_method: "razorpay",
+      payment_method_title: "Credit Card/Debit Card/NetBanking",
       set_paid: false,
-      billing: {
-        first_name: billing.firstName.trim(),
-        last_name: (billing.lastName || "").trim(),
-        company: (billing.company || "").trim(),
-        address_1: billing.address1.trim(),
-        address_2: (billing.address2 || "").trim(),
-        city: billing.city.trim(),
-        state: billing.state || "MH",
-        postcode: billing.postcode.trim(),
-        country: "IN",
-        email: billing.email.trim(),
-        phone: billing.phone.trim(),
-      },
-      shipping: {
-        first_name: (ship.firstName || billing.firstName).trim(),
-        last_name: (ship.lastName || billing.lastName || "").trim(),
-        company: (ship.company || billing.company || "").trim(),
-        address_1: (ship.address1 || billing.address1).trim(),
-        address_2: (ship.address2 || billing.address2 || "").trim(),
-        city: (ship.city || billing.city).trim(),
-        state: ship.state || billing.state || "MH",
-        postcode: (ship.postcode || billing.postcode).trim(),
-        country: "IN",
-      },
-      line_items: lineItems,
+      billing: { ...address, email: clean(b.email, 254).toLowerCase(), phone },
+      shipping: address,
+      line_items: verified.lines,
       shipping_lines: [
         {
-          method_id: shippingOption === "express" ? "express_shipping" : "flat_rate",
-          method_title: shippingOption === "express" ? "Express Shipping" : "Standard Shipping",
-          total: shippingOption === "express" ? "250.00" : "80.00",
+          method_id: shippingChoice.methodId,
+          method_title: shippingChoice.title,
+          total: shippingCost.toFixed(2),
         },
       ],
-      ...(couponCode && typeof couponCode === "string" && couponCode.trim()
-        ? { coupon_lines: [{ code: couponCode.trim() }] }
-        : {}),
-      customer_note: customerNote.trim(),
+      ...(coupon ? { coupon_lines: [{ code: coupon.code }] } : {}),
+      customer_note: clean(body?.customerNote, 500),
       meta_data: [
         { key: "_order_source", value: "CrownLeaf Headless Next.js" },
         { key: "_checkout_mode", value: mode },
-        ...(billing.gstin ? [{ key: "_billing_gstin", value: billing.gstin.trim() }] : []),
+        ...(clean(b.gstin, 20) ? [{ key: "_billing_gstin", value: clean(b.gstin, 20).toUpperCase() }] : []),
       ],
     };
 
-    // 4. Submit Order to WooCommerce REST API v3
     const orderResponse = await wcApi.post("orders", orderData);
     const order = orderResponse.data;
 
-    // 5. If checkout was from Cart, clear the WooCommerce Store API cart session
-    if (mode === "cart") {
-      try {
-        const cookieStore = await cookies();
-        const cartToken = cookieStore.get("wc_cart_token")?.value || "";
-        const cartNonce = cookieStore.get("wc_cart_nonce")?.value || "";
+    // WooCommerce's own order-pay page collects the payment with the enabled gateway (Razorpay),
+    // then sends the customer emails and updates the order status and stock.
+    const paymentUrl =
+      order.payment_url ||
+      `${WP_URL}/checkout/order-pay/${order.id}/?pay_for_order=true&key=${encodeURIComponent(order.order_key)}`;
 
-        if (cartToken) {
-          const STORE_API_BASE = "https://crownleaf.co/wp-json/wc/store/v1";
-          const headers = { "Content-Type": "application/json", "Cart-Token": cartToken };
-          if (cartNonce) headers["Nonce"] = cartNonce;
-
-          // Clear items from WooCommerce Store API cart
-          await fetch(`${STORE_API_BASE}/cart/items`, {
-            method: "DELETE",
-            headers,
-          });
-        }
-      } catch (clearErr) {
-        console.warn("Notice: Cart session clear after order creation skipped:", clearErr?.message);
-      }
-    }
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       orderId: order.id,
       orderNumber: order.number || order.id,
+      orderKey: order.order_key, // the shopper's proof of ownership, used by the payment routes
       status: order.status,
       total: order.total,
       currency: order.currency_symbol || "₹",
-      dateCreated: order.date_created,
-      billing: order.billing,
-      shipping: order.shipping,
-      lineItems: order.line_items,
+      paymentUrl,
     });
+
+    // An order was placed from the bag: empty the WooCommerce cart session (best effort).
+    if (mode === "cart") {
+      try {
+        const { session } = await storeFetch("/cart/items", { method: "DELETE", session: await readCartSession() });
+        applyCartSession(response, session);
+      } catch (clearErr) {
+        console.warn("Cart session clear after order creation skipped:", clearErr?.message);
+      }
+    }
+
+    return response;
   } catch (err) {
-    console.error("WooCommerce Order Creation Error:", err?.response?.data || err.message);
-    const message =
-      err?.response?.data?.message ||
-      err?.message ||
-      "An unexpected error occurred while communicating with WooCommerce. Please try again.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("WooCommerce order creation error:", err?.response?.data || err.message);
+    const wcMessage = stripHtml(err?.response?.data?.message);
+    const isClientError = err?.response?.status >= 400 && err?.response?.status < 500;
+    return fail(
+      isClientError && wcMessage ? wcMessage : "We could not place your order right now. Please try again, or contact us on WhatsApp.",
+      isClientError ? 400 : 502
+    );
   }
 }

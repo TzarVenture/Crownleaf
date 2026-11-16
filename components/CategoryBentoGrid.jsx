@@ -39,7 +39,7 @@ const BENTO_CATEGORIES = [
     eyebrow: "Conscious Gifting",
     title: "Sustainable & Eco-Friendly",
     ctaText: "View Sustainable",
-    href: "/products?category=eco-friendly",
+    href: "/products?category=eco-freindly",
     image: "/images/bento/bento-eco-friendly.jpg",
     span: "col-span-1 min-h-[240px] sm:min-h-[260px] lg:min-h-[240px]",
     titleSize: "text-lg sm:text-xl lg:text-[20px]",
@@ -49,7 +49,7 @@ const BENTO_CATEGORIES = [
     eyebrow: "Celebration Boxes",
     title: "Festive & Milestone Hampers",
     ctaText: "Explore Festive Hampers",
-    href: "/products?category=celebration",
+    href: "/products?category=work-anniversary-gifts",
     image: "/images/bento/bento-festive-hampers.jpg",
     span: "col-span-1 md:col-span-2 lg:col-span-4 min-h-[260px] sm:min-h-[280px] lg:min-h-[280px]",
     titleSize: "text-2xl sm:text-3xl lg:text-[28px] xl:text-[30px]",
@@ -81,7 +81,7 @@ export default function CategoryBentoGrid() {
         <Reveal className="flex items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-10 lg:mb-12">
           <div className="hairline-l h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
           <div className="text-center">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.25em] text-[#A67D44] block mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.25em] text-[#8E6935] block mb-1">
               Bespoke Corporate Collections
             </span>
             <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
@@ -111,7 +111,6 @@ export default function CategoryBentoGrid() {
                       : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   }
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  priority={item.id === "welcome-kits"}
                 />
               </div>
 
@@ -121,7 +120,7 @@ export default function CategoryBentoGrid() {
               {/* Optional Top Badge for Signature Category */}
               {item.badge && (
                 <div className="absolute top-4 left-4 z-10">
-                  <span className="px-3 py-1 bg-[#A67D44] text-white text-[10px] font-bold uppercase tracking-wider rounded-none shadow-xs">
+                  <span className="px-3 py-1 bg-[#8E6935] text-white text-[10px] font-bold uppercase tracking-wider rounded-none shadow-xs">
                     {item.badge}
                   </span>
                 </div>
@@ -143,7 +142,7 @@ export default function CategoryBentoGrid() {
 
                 {/* Action CTA Button with Hover Micro-Interaction */}
                 <div className="mt-4 sm:mt-5">
-                  <span className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[#A67D44] group-hover:bg-[#8E6935] text-white text-[10.5px] sm:text-xs font-bold uppercase tracking-[0.14em] rounded-none transition-colors shadow-xs w-fit">
+                  <span className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[#8E6935] group-hover:bg-[#7A5A2D] text-white text-[10.5px] sm:text-xs font-bold uppercase tracking-[0.14em] rounded-none transition-colors shadow-xs w-fit">
                     <span>{item.ctaText}</span>
                     <span className="text-sm transition-transform duration-300 group-hover:translate-x-1">
                       →

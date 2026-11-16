@@ -1,214 +1,164 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { wcApi } from "@/lib/woocommerce";
+import { applyCartSession, readCartSession, storeFetch } from "@/lib/storeApi";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import { stripHtml } from "@/lib/validation";
 
-const STORE_API_BASE = "https://crownleaf.co/wp-json/wc/store/v1";
+// Cart API backed by the WooCommerce Store API.
+// GET  -> current cart
+// POST -> { action: "add" | "update" | "remove", ... }
 
-// Helper to normalize Store API cart items and totals
-function formatCartData(wcCart) {
-  const items = (wcCart.items || []).map((item) => {
-    const rawPrice = parseInt(item.prices?.price || "0", 10);
-    const unitPrice = rawPrice / 100;
-    const lineTotal = parseInt(item.totals?.line_total || "0", 10) / 100;
+// For a variation, the Store API returns the *variation* ID as the item id and gives no parent ID.
+// WooCommerce orders need both, so resolve the parent from the product URL slug (cached).
+const parentIdBySlug = new Map();
 
-    return {
-      key: item.key,
-      id: item.id,
-      name: item.name,
-      quantity: item.quantity,
-      price: unitPrice,
-      total: lineTotal,
-      currency: item.prices?.currency_symbol || "₹",
-      image: item.images?.[0]?.src || item.images?.[0]?.thumbnail || null,
-      variation: item.variation || [],
-      permalink: item.permalink || "",
-      sku: item.sku || "",
-    };
-  });
+async function resolveParentProductId(item) {
+  if (item.type !== "variation") return item.id;
+  const slug = /\/product\/([^/?#]+)/.exec(item.permalink || "")?.[1];
+  if (!slug) return item.id;
+  if (parentIdBySlug.has(slug)) return parentIdBySlug.get(slug);
+  try {
+    const res = await wcApi.get("products", { slug, status: "publish", per_page: 1 });
+    const id = res.data?.[0]?.id;
+    if (id) {
+      parentIdBySlug.set(slug, id);
+      return id;
+    }
+  } catch (err) {
+    console.warn("Could not resolve parent product for variation:", err?.message);
+  }
+  return item.id;
+}
 
-  const totalItemsMinor = parseInt(wcCart.totals?.total_items || "0", 10);
-  const totalPriceMinor = parseInt(wcCart.totals?.total_price || "0", 10);
-  const totalShippingMinor = parseInt(wcCart.totals?.total_shipping || "0", 10);
+async function formatCartData(wcCart) {
+  const minor = 10 ** (wcCart.totals?.currency_minor_unit ?? 2);
+  const items = await Promise.all(
+    (wcCart.items || []).map(async (item) => {
+      const slug = /\/product\/([^/?#]+)/.exec(item.permalink || "")?.[1];
+      const isVariation = item.type === "variation";
+      return {
+        key: item.key,
+        id: item.id,
+        productId: await resolveParentProductId(item),
+        variationId: isVariation ? item.id : 0,
+        name: stripHtml(item.name),
+        quantity: item.quantity,
+        price: Number.parseInt(item.prices?.price || "0", 10) / minor,
+        total: Number.parseInt(item.totals?.line_total || "0", 10) / minor,
+        currency: item.prices?.currency_symbol || "₹",
+        image: item.images?.[0]?.thumbnail || item.images?.[0]?.src || null,
+        variation: (item.variation || []).map((v) => ({ attribute: v.attribute, value: v.value })),
+        // Link to our own product page, not the WordPress one
+        permalink: slug ? `/product/${slug}` : "",
+        sku: item.sku || "",
+      };
+    })
+  );
 
   return {
     items,
     itemsCount: wcCart.items_count || items.reduce((acc, it) => acc + it.quantity, 0),
     totals: {
-      subtotal: totalItemsMinor / 100,
-      total: totalPriceMinor / 100,
-      shipping: totalShippingMinor / 100,
+      subtotal: Number.parseInt(wcCart.totals?.total_items || "0", 10) / minor,
+      total: Number.parseInt(wcCart.totals?.total_price || "0", 10) / minor,
+      shipping: Number.parseInt(wcCart.totals?.total_shipping || "0", 10) / minor,
       currency: wcCart.totals?.currency_symbol || "₹",
     },
-    raw: wcCart,
   };
 }
 
-// GET: Fetch current user cart from WooCommerce Store API
-export async function GET() {
+function errorResponse(message, status, session) {
+  const response = NextResponse.json({ error: message }, { status });
+  return session ? applyCartSession(response, session) : response;
+}
+
+// GET: fetch the shopper's current cart
+export async function GET(request) {
+  const limit = rateLimit(`cart-get:${getClientIp(request)}`, { limit: 120, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
   try {
-    const cookieStore = await cookies();
-    const cartToken = cookieStore.get("wc_cart_token")?.value || "";
-    const cartNonce = cookieStore.get("wc_cart_nonce")?.value || "";
-
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (cartToken) headers["Cart-Token"] = cartToken;
-    if (cartNonce) headers["Nonce"] = cartNonce;
-
-    const res = await fetch(`${STORE_API_BASE}/cart`, {
-      method: "GET",
-      headers,
-      cache: "no-store",
-    });
-
+    const { res, data, session } = await storeFetch("/cart", { session: await readCartSession() });
     if (!res.ok) {
-      const errText = await res.text();
-      console.error("WooCommerce Store API GET error:", res.status, errText);
-      return NextResponse.json({ error: "Failed to fetch cart from WooCommerce" }, { status: res.status });
+      console.error("WooCommerce Store API GET /cart error:", res.status, data?.code);
+      return errorResponse("Unable to load your cart right now.", res.status === 401 ? 401 : 502);
     }
-
-    const newCartToken = res.headers.get("cart-token");
-    const newCartNonce = res.headers.get("nonce");
-    const data = await res.json();
-    const formatted = formatCartData(data);
-
-    const response = NextResponse.json(formatted);
-
-    // Persist new token & nonce in cookies if provided
-    if (newCartToken) {
-      response.cookies.set("wc_cart_token", newCartToken, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 14, // 14 days
-        sameSite: "lax",
-        httpOnly: false,
-      });
-    }
-    if (newCartNonce) {
-      response.cookies.set("wc_cart_nonce", newCartNonce, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 14,
-        sameSite: "lax",
-        httpOnly: false,
-      });
-    }
-
-    return response;
+    return applyCartSession(NextResponse.json(await formatCartData(data)), session);
   } catch (err) {
     console.error("Error in GET /api/cart:", err);
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+    return errorResponse("Unable to load your cart right now.", 502);
   }
 }
 
-// POST: Execute cart operations (add, update, remove, apply-coupon)
-export async function POST(req) {
+const isId = (v) => Number.isInteger(v) && v > 0;
+
+// POST: add, update or remove a cart item
+export async function POST(request) {
+  const limit = rateLimit(`cart-post:${getClientIp(request)}`, { limit: 60, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+  let body;
   try {
-    const body = await req.json();
-    const { action } = body;
+    body = await request.json();
+  } catch {
+    return errorResponse("Invalid request.", 400);
+  }
 
-    const cookieStore = await cookies();
-    let cartToken = cookieStore.get("wc_cart_token")?.value || "";
-    let cartNonce = cookieStore.get("wc_cart_nonce")?.value || "";
+  const session = await readCartSession();
+  let path;
+  let payload;
 
-    // If no cart token or nonce exists, fetch one first
-    if (!cartToken || !cartNonce) {
-      const initRes = await fetch(`${STORE_API_BASE}/cart`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-      });
-      cartToken = initRes.headers.get("cart-token") || cartToken;
-      cartNonce = initRes.headers.get("nonce") || cartNonce;
+  switch (body?.action) {
+    case "add": {
+      const id = Number.parseInt(body.id, 10);
+      const variationId = Number.parseInt(body.variationId, 10) || 0;
+      const quantity = Number.parseInt(body.quantity, 10) || 1;
+      if (!isId(id) || quantity < 1 || quantity > 9999) return errorResponse("Invalid product or quantity.", 400);
+      path = "/cart/add-item";
+      // A variation ID alone is enough for WooCommerce to add the right variation.
+      payload = { id: isId(variationId) ? variationId : id, quantity };
+      if (!isId(variationId) && Array.isArray(body.variation) && body.variation.length) {
+        payload.variation = body.variation
+          .slice(0, 10)
+          .map((v) => ({ attribute: String(v.attribute || "").slice(0, 80), value: String(v.value || "").slice(0, 80) }));
+      }
+      break;
     }
-
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (cartToken) headers["Cart-Token"] = cartToken;
-    if (cartNonce) headers["Nonce"] = cartNonce;
-
-    let targetEndpoint = "";
-    let requestPayload = {};
-
-    switch (action) {
-      case "add":
-        targetEndpoint = `${STORE_API_BASE}/cart/add-item`;
-        requestPayload = {
-          id: body.id,
-          quantity: body.quantity || 1,
-          variation: body.variation || [],
-        };
-        break;
-
-      case "update":
-        targetEndpoint = `${STORE_API_BASE}/cart/update-item`;
-        requestPayload = {
-          key: body.key,
-          quantity: body.quantity,
-        };
-        break;
-
-      case "remove":
-        targetEndpoint = `${STORE_API_BASE}/cart/remove-item`;
-        requestPayload = {
-          key: body.key,
-        };
-        break;
-
-      case "coupon":
-        targetEndpoint = `${STORE_API_BASE}/cart/apply-coupon`;
-        requestPayload = {
-          code: body.code,
-        };
-        break;
-
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    case "update": {
+      const quantity = Number.parseInt(body.quantity, 10);
+      if (typeof body.key !== "string" || !body.key || !Number.isInteger(quantity) || quantity < 1 || quantity > 9999) {
+        return errorResponse("Invalid quantity.", 400);
+      }
+      path = "/cart/update-item";
+      payload = { key: body.key, quantity };
+      break;
     }
+    case "remove":
+      if (typeof body.key !== "string" || !body.key) return errorResponse("Invalid item.", 400);
+      path = "/cart/remove-item";
+      payload = { key: body.key };
+      break;
+    default:
+      return errorResponse("Invalid action.", 400);
+  }
 
-    const res = await fetch(targetEndpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestPayload),
-      cache: "no-store",
-    });
-
-    const newCartToken = res.headers.get("cart-token") || cartToken;
-    const newCartNonce = res.headers.get("nonce") || cartNonce;
+  try {
+    const { res, data, session: nextSession } = await storeFetch(path, { method: "POST", body: payload, session });
 
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
-      console.error("WooCommerce Store API error:", res.status, errorJson);
-      return NextResponse.json(
-        { error: errorJson.message || "WooCommerce cart action failed", details: errorJson },
-        { status: res.status }
-      );
+      console.error("WooCommerce Store API error:", res.status, data?.code);
+      const message =
+        data?.code === "woocommerce_rest_missing_attributes"
+          ? "Please choose all product options first."
+          : data?.code === "woocommerce_rest_product_not_purchasable"
+          ? "This product is not available to buy online. Please request a quote."
+          : stripHtml(data?.message) || "We could not update your cart. Please try again.";
+      return errorResponse(message, res.status >= 500 ? 502 : res.status, nextSession);
     }
 
-    const updatedData = await res.json();
-    const formatted = formatCartData(updatedData);
-
-    const response = NextResponse.json(formatted);
-
-    if (newCartToken) {
-      response.cookies.set("wc_cart_token", newCartToken, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 14,
-        sameSite: "lax",
-        httpOnly: false,
-      });
-    }
-    if (newCartNonce) {
-      response.cookies.set("wc_cart_nonce", newCartNonce, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 14,
-        sameSite: "lax",
-        httpOnly: false,
-      });
-    }
-
-    return response;
+    return applyCartSession(NextResponse.json(await formatCartData(data)), nextSession);
   } catch (err) {
     console.error("Error in POST /api/cart:", err);
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+    return errorResponse("We could not update your cart. Please try again.", 502);
   }
 }

@@ -6,17 +6,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import SearchModal from "@/components/SearchModal";
+import { WP_PAGES, SALES_PHONE_DISPLAY, SALES_PHONE_TEL } from "@/lib/site";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // The menu counts as open only on the page where it was opened, so it closes by itself after navigating
+  const [menuOpenPath, setMenuOpenPath] = useState(null);
+  const mobileMenuOpen = menuOpenPath === pathname;
+  const setMobileMenuOpen = (open) => setMenuOpenPath(open ? pathname : null);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const { cart, openCart } = useCart();
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
 
   // Global keyboard shortcut: Cmd+K / Ctrl+K opens search
   useEffect(() => {
@@ -47,7 +46,7 @@ export default function Navbar() {
     <>
       <header id="site-header" className="sticky top-0 z-40 w-full shadow-xs bg-[#EFE8E0]">
         {/* 1. Top Announcement Bar */}
-        <div className="bg-[#003108] text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-4 border-b border-black/10 select-none">
+        <div className="bg-[#003108] text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-4 border-b border-black/10">
           <div className="max-w-[1300px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-1 sm:gap-1.5 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <span className="font-semibold tracking-wider uppercase text-[10.5px] sm:text-[11px] text-[#A67D44]">
@@ -89,27 +88,27 @@ export default function Navbar() {
             <div className="hidden lg:flex items-center gap-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#003108]">
               <Link
                 href="/products"
-                className={`hover:text-[#A67D44] transition-colors py-2 border-b-2 ${
-                  pathname === "/products" ? "border-[#A67D44] text-[#A67D44]" : "border-transparent"
+                className={`hover:text-[#8E6935] transition-colors py-2 border-b-2 ${
+                  pathname === "/products" ? "border-[#A67D44] text-[#8E6935]" : "border-transparent"
                 }`}
               >
                 Corporate Gifts
               </Link>
               <Link
                 href="/products"
-                className="hover:text-[#A67D44] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
+                className="hover:text-[#8E6935] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
               >
                 Collections
               </Link>
               <Link
-                href="/#about"
-                className="hover:text-[#A67D44] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
+                href={WP_PAGES.about}
+                className="hover:text-[#8E6935] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
               >
                 About Us
               </Link>
               <Link
                 href="/#enquiry"
-                className="hover:text-[#A67D44] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
+                className="hover:text-[#8E6935] transition-colors py-2 border-b-2 border-transparent hover:border-[#A67D44]"
               >
                 Bulk Enquiry
               </Link>
@@ -121,7 +120,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setSearchModalOpen(true)}
-                className="p-2.5 rounded-full border border-[#D1B2B2] bg-white/70 hover:bg-white text-[#003108] hover:text-[#A67D44] transition-all flex items-center justify-center shadow-2xs group focus:outline-none focus:ring-2 focus:ring-[#A67D44]/30"
+                className="p-2.5 rounded-full border border-[#D1B2B2] bg-white/70 hover:bg-white text-[#003108] hover:text-[#8E6935] transition-all flex items-center justify-center shadow-2xs group focus:outline-none focus:ring-2 focus:ring-[#A67D44]/30"
                 aria-label="Search products (Ctrl+K)"
                 title="Search products (Ctrl+K)"
               >
@@ -144,7 +143,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={openCart}
-                className="relative p-2.5 rounded-full border border-[#D1B2B2] bg-white/70 hover:bg-white text-[#003108] hover:text-[#A67D44] transition-all flex items-center justify-center shadow-2xs group focus:outline-none focus:ring-2 focus:ring-[#A67D44]/30"
+                className="relative p-2.5 rounded-full border border-[#D1B2B2] bg-white/70 hover:bg-white text-[#003108] hover:text-[#8E6935] transition-all flex items-center justify-center shadow-2xs group focus:outline-none focus:ring-2 focus:ring-[#A67D44]/30"
                 aria-label={`Open shopping cart with ${cart.itemsCount} items`}
               >
                 <svg
@@ -168,12 +167,12 @@ export default function Navbar() {
               </button>
 
               {/* Request Quote CTA */}
-              <a
+              <Link
                 href="/#enquiry"
-                className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] transition-all shadow-xs"
+                className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#8E6935] text-white hover:bg-[#7A5A2D] transition-all shadow-xs"
               >
                 Request Quote
-              </a>
+              </Link>
             </div>
 
             {/* Mobile Actions: Search + Cart + Hamburger */}
@@ -217,6 +216,7 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 text-[#003108] focus:outline-none"
                 aria-label="Toggle navigation menu"
+                aria-expanded={mobileMenuOpen}
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {mobileMenuOpen ? (
@@ -241,7 +241,7 @@ export default function Navbar() {
                 }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white border border-[#E4DCCF] text-stone-500 text-xs text-left"
               >
-                <svg className="w-4 h-4 text-[#A67D44]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[#8E6935]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <span>Search products, categories...</span>
@@ -263,7 +263,7 @@ export default function Navbar() {
                   Collections
                 </Link>
                 <Link
-                  href="/#about"
+                  href={WP_PAGES.about}
                   onClick={() => setMobileMenuOpen(false)}
                   className="block text-sm font-semibold uppercase tracking-wider text-[#003108] py-2.5"
                 >
@@ -286,13 +286,13 @@ export default function Navbar() {
 
               {/* Request Quote Button */}
               <div className="pt-2">
-                <a
+                <Link
                   href="/#enquiry"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-center w-full px-5 py-3 rounded-full text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] shadow-xs"
+                  className="block text-center w-full px-5 py-3 rounded-full text-xs font-bold uppercase tracking-wider bg-[#8E6935] text-white hover:bg-[#7A5A2D] shadow-xs"
                 >
                   Request Quote
-                </a>
+                </Link>
               </div>
             </div>
           )}
@@ -300,7 +300,7 @@ export default function Navbar() {
       </header>
 
       {/* 4. Global Search Modal */}
-      <SearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+      {searchModalOpen && <SearchModal onClose={() => setSearchModalOpen(false)} />}
     </>
   );
 }
