@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ProductCard from "./ProductCard";
+import Reveal from "./Reveal";
 
 /**
  * BrandFeatureSection Component
@@ -31,7 +32,7 @@ export default function BrandFeatureSection({ products = [] }) {
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-stretch gap-5 sm:gap-6 lg:gap-6 xl:gap-7">
           {/* Left Feature Callout Panel (Brand Authority Block) */}
-          <div className="w-full lg:w-[29%] xl:w-[27%] shrink-0 bg-[#FAF7F2] border border-[#E5DDD2] p-5 sm:p-6 lg:p-7 flex flex-col justify-between">
+          <Reveal className="w-full lg:w-[29%] xl:w-[27%] shrink-0 bg-[#FAF7F2] border border-[#E5DDD2] p-5 sm:p-6 lg:p-7 flex flex-col justify-between">
             <div>
               {/* Eyebrow Header */}
               <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
@@ -91,7 +92,7 @@ export default function BrandFeatureSection({ products = [] }) {
                 <span className="text-sm">→</span>
               </Link>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right Product Showcase (4 Real In-Stock Products) */}
           <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -102,9 +103,10 @@ export default function BrandFeatureSection({ products = [] }) {
             ) : (
               /* Responsive shelf: Horizontal swipe on mobile, 4-col grid on desktop */
               <div className="flex lg:grid lg:grid-cols-4 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scrollbar-none gap-3 sm:gap-3.5 lg:gap-3.5 xl:gap-4 pb-2 lg:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0">
-                {displayProducts.map((product) => (
-                  <div
+                {displayProducts.map((product, i) => (
+                  <Reveal
                     key={product.id}
+                    index={i + 1}
                     className="flex-shrink-0 w-[62vw] max-w-[230px] sm:w-[42vw] lg:w-auto snap-start bg-white border border-[#E5DDD2] p-2.5 sm:p-3 flex flex-col justify-between"
                   >
                     <ProductCard
@@ -112,7 +114,7 @@ export default function BrandFeatureSection({ products = [] }) {
                       aspectRatio="aspect-square"
                       className="h-full"
                     />
-                  </div>
+                  </Reveal>
                 ))}
               </div>
             )}

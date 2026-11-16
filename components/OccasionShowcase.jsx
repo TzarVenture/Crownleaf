@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Reveal from "@/components/Reveal";
 
 export default function OccasionShowcase() {
   const whyPoints = [
@@ -49,7 +50,7 @@ export default function OccasionShowcase() {
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr_1fr] items-stretch gap-6 lg:gap-8">
           {/* Left Column: Why They'll Love It */}
-          <div className="w-full flex flex-col justify-start py-6 sm:py-8 lg:py-12 px-2 sm:px-4 lg:px-6 order-2 lg:order-1">
+          <Reveal index={0} className="w-full flex flex-col justify-start py-6 sm:py-8 lg:py-12 px-2 sm:px-4 lg:px-6 order-2 lg:order-1">
             <div>
               {/* Centered Header (Identical height to right header) */}
               <div className="text-center mb-5 sm:mb-6 flex flex-col items-center justify-start min-h-[68px] sm:min-h-[80px]">
@@ -96,10 +97,10 @@ export default function OccasionShowcase() {
                 </svg>
               </Link>
             </div>
-          </div>
+          </Reveal>
 
           {/* Center Column: Proportional on mobile, Full-Height on desktop */}
-          <div className="w-full order-1 lg:order-2 self-stretch relative h-[250px] sm:h-[320px] lg:h-full lg:min-h-full">
+          <Reveal index={1} className="w-full order-1 lg:order-2 self-stretch relative h-[250px] sm:h-[320px] lg:h-full lg:min-h-full">
             <div className="relative w-full h-full overflow-hidden">
               <Image
                 src="/images/bespoke-gift-box.jpg"
@@ -110,13 +111,13 @@ export default function OccasionShowcase() {
                 priority
               />
             </div>
-          </div>
+          </Reveal>
 
           {/* Subtle Mobile Divider between stacked columns */}
           <div className="w-24 h-px bg-[#D9CEBF] mx-auto my-2 lg:hidden order-2" />
 
           {/* Right Column: Make Every Occasion Special */}
-          <div className="w-full flex flex-col justify-between py-6 sm:py-8 lg:py-12 px-2 sm:px-4 lg:px-6 order-3">
+          <Reveal index={2} className="w-full flex flex-col justify-between py-6 sm:py-8 lg:py-12 px-2 sm:px-4 lg:px-6 order-3">
             <div>
               {/* Centered Header (Identical height to left header) */}
               <div className="text-center mb-5 sm:mb-6 flex flex-col items-center justify-start min-h-[68px] sm:min-h-[80px]">
@@ -158,7 +159,7 @@ export default function OccasionShowcase() {
                 Distinguished Brands
               </span>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

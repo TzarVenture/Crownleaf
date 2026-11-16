@@ -6,6 +6,7 @@ import OccasionShowcase from "@/components/OccasionShowcase";
 import BrandFeatureSection from "@/components/BrandFeatureSection";
 import CategoryBentoGrid from "@/components/CategoryBentoGrid";
 import Footer from "@/components/Footer";
+import Reveal from "@/components/Reveal";
 import { wcApi } from "@/lib/woocommerce";
 
 export const revalidate = 60; // Revalidate inventory cache every 60 seconds (ISR)
@@ -67,13 +68,13 @@ export default async function HomePage() {
         {/* Section 1: Featured Corporate Gifts & Hampers */}
         <section id="inventory" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full">
           {/* Section Header with Flanking Architectural Hairlines */}
-          <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
-            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+          <Reveal className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+            <div className="hairline-l h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
             <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
               Featured Corporate Gifts &amp; Hampers
             </h2>
-            <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
-          </div>
+            <div className="hairline-r h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+          </Reveal>
 
           {/* Diagnostic Error Notice */}
           {error ? (
@@ -89,8 +90,10 @@ export default async function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
-              {inventoryProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {inventoryProducts.map((product, i) => (
+                <Reveal key={product.id} index={i % 4} className="h-full">
+                  <ProductCard product={product} />
+                </Reveal>
               ))}
             </div>
           )}
@@ -103,17 +106,19 @@ export default async function HomePage() {
         {drinkwareProducts.length > 0 && (
           <section id="drinkware" className="py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-[1300px] mx-auto w-full border-t border-[#E2D9CF]/60">
             {/* Section Header with Flanking Architectural Hairlines */}
-            <div className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
-              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            <Reveal className="flex items-center justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 lg:mb-10">
+              <div className="hairline-l h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
               <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
                 Executive Drinkware &amp; Desk Essentials
               </h2>
-              <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
-            </div>
+              <div className="hairline-r h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+            </Reveal>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
-              {drinkwareProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {drinkwareProducts.map((product, i) => (
+                <Reveal key={product.id} index={i % 4} className="h-full">
+                  <ProductCard product={product} />
+                </Reveal>
               ))}
             </div>
           </section>
