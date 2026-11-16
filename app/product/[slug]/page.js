@@ -68,21 +68,15 @@ async function getRelatedProducts(categoryId, currentProductId) {
   }
 }
 
-// Pre-render published products at build time for near-instant navigation
+// Product pages are NOT pre-rendered at build time. They are generated on the first visit and then
+// cached and refreshed every 60 seconds (revalidate above).
+// Why: pre-rendering made every deploy depend on the WordPress server answering, from the build
+// machine, for each product at that moment. One timeout failed the whole build and blocked the release.
+// Returning an empty list keeps the build independent of WordPress; pages still render on demand.
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
-  try {
-    const response = await wcApi.get("products", {
-      status: "publish",
-      stock_status: "instock", // Strictly in-stock products
-      per_page: 20,
-    });
-    return (response.data || []).map((product) => ({
-      slug: product.slug,
-    }));
-  } catch (err) {
-    console.error("Error generating static params for products:", err?.message);
-    return [];
-  }
+  return [];
 }
 
 const stripTags = (html) => (html || "").replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim();
