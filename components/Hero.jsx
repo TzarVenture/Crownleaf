@@ -1,124 +1,324 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
+const LIFESTYLE_BANNER = {
+  image: "/images/banners/home-hero.webp",
+  alt: "Colleagues opening a corporate gift box with a notebook, drinkware and eco-friendly gifts",
+  mobilePos: "object-[68%_50%]",
+  desktopPos: "lg:object-center",
+};
+
+// Each slide can carry its own banner image and crop. The crop classes are written out in full
+// so Tailwind picks them up. Slides without an image use the lifestyle banner.
+const SLIDES = [
+  {
+    id: "welcome-kits",
+    headline: "Welcome Kits for New Hires",
+    text: "Custom-branded onboarding kits.",
+    cta: "Shop Welcome Kits",
+    href: "/products?category=welcome-kit",
+    ...LIFESTYLE_BANNER,
+  },
+  {
+    id: "executive-gifts",
+    headline: "Gifts for Clients and Leaders",
+    text: "Curated executive gift sets.",
+    cta: "Shop Executive Gifts",
+    href: "/products?category=executive-gifts",
+    image: "/images/banners/home-hero-2.webp",
+    alt: "Black and white flasks, bamboo-lid mugs, cork notebooks and a pen arranged with eucalyptus leaves",
+    mobilePos: "object-[88%_50%]",
+    desktopPos: "lg:object-[center_45%]",
+  },
+  {
+    id: "drinkware",
+    headline: "Branded Drinkware",
+    text: "Flasks and mugs with your logo.",
+    cta: "Shop Drinkware",
+    href: "/products?category=drinkware",
+    image: "/images/banners/home-hero-3.webp",
+    alt: "Flat lay of black and white flasks, bamboo-lid mugs, glass tumblers, cork notebooks, coasters and pens",
+    mobilePos: "object-center",
+    desktopPos: "lg:object-center",
+    // This image has products across the whole width, so the desktop text sits on a soft cream panel.
+    panel: "lg:bg-[#FAF8F5]/90 lg:p-7 lg:-ml-7",
+  },
+  {
+    id: "employee-gifts",
+    headline: "Gifts for Every Milestone",
+    text: "Hampers for employee recognition.",
+    cta: "Shop Employee Gifts",
+    href: "/products?category=employee-gifts",
+    image: "/images/banners/home-hero-4-clean.webp",
+    alt: "Three CrownLeaf employee gift hampers: a branded notebook and drinkware set, an executive set with a keychain and gourmet jars, and a wellness gift box",
+    mobilePos: "object-[80%_50%]",
+    desktopPos: "lg:object-center",
+  },
+];
+
+const TOTAL = SLIDES.length;
+// Track = [clone of last, ...real slides, clone of first]; real slides sit at index 1..TOTAL.
+const TRACK = [SLIDES[TOTAL - 1], ...SLIDES, SLIDES[0]];
+const AUTOPLAY_MS = 6000;
+const SLIDE_MS = 500;
+const SWIPE_PX = 50;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(callback) {
+  const mql = window.matchMedia(REDUCED_MOTION_QUERY);
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+// Small screens: outlined, no fill (sits on the cream page background).
+// Desktop: translucent green glass so it reads on both the light and dark parts of the banner.
+const arrowButtonClass =
+  "w-11 h-11 shrink-0 rounded-full border border-[#003108]/40 text-[#003108] hover:bg-[#003108]/10 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8E6935] lg:bg-[#003108]/30 lg:border-white/60 lg:text-white lg:backdrop-blur-sm lg:hover:bg-[#003108]/55";
+
+/**
+ * Hero
+ *
+ * Full-width banner slider. The same banner image is repeated on four slides,
+ * each with its own category text and CTA. The loop is infinite: clones of the
+ * last and first slide sit at the ends of the track, and after reaching a clone
+ * the track jumps back (without transition) to the matching real slide.
+ */
 export default function Hero() {
+  const [index, setIndex] = useState(1);
+  const [animate, setAnimate] = useState(true);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+
+  const indexRef = useRef(1);
+  const busyRef = useRef(false);
+  const timerRef = useRef(null);
+  const pointerStartX = useRef(null);
+
+  const reduced = useSyncExternalStore(
+    subscribeReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false
+  );
+
+  const commit = useCallback((next) => {
+    indexRef.current = next;
+    setIndex(next);
+  }, []);
+
+  // After a move: if we are on a clone, jump to the matching real slide with no transition.
+  const settle = useCallback(() => {
+    clearTimeout(timerRef.current);
+    const current = indexRef.current;
+    if (current === 0 || current === TOTAL + 1) {
+      setAnimate(false);
+      commit(current === 0 ? TOTAL : 1);
+      // Re-enable the transition only after the un-animated jump has painted.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          setAnimate(true);
+          busyRef.current = false;
+        })
+      );
+    } else {
+      busyRef.current = false;
+    }
+  }, [commit]);
+
+  const startMove = useCallback(
+    (target) => {
+      if (busyRef.current || target === indexRef.current) return;
+      busyRef.current = true;
+      setAnimate(true);
+      commit(target);
+      // Fallback when transitionend never fires (hidden tab, reduced motion).
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(settle, reduced ? 30 : SLIDE_MS + 150);
+    },
+    [commit, reduced, settle]
+  );
+
+  const next = useCallback(() => startMove(indexRef.current + 1), [startMove]);
+  const prev = useCallback(() => startMove(indexRef.current - 1), [startMove]);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const autoplayActive = !userPaused && !hovered && !focused && !reduced;
+  useEffect(() => {
+    if (!autoplayActive) return undefined;
+    const id = setInterval(() => {
+      if (!document.hidden) next();
+    }, AUTOPLAY_MS);
+    return () => clearInterval(id);
+  }, [autoplayActive, next]);
+
+  const activeDot = (((index - 1) % TOTAL) + TOTAL) % TOTAL;
+
+  const handlePointerDown = (e) => {
+    pointerStartX.current = e.clientX;
+  };
+  const handlePointerUp = (e) => {
+    if (pointerStartX.current === null) return;
+    const dx = e.clientX - pointerStartX.current;
+    pointerStartX.current = null;
+    if (Math.abs(dx) >= SWIPE_PX) {
+      if (dx < 0) next();
+      else prev();
+    }
+  };
+
   return (
     <section
       id="hero-section"
-      aria-label="CrownLeaf Corporate Gifting Atelier"
-      className="relative w-full overflow-hidden bg-[#FAF8F5] select-none border-b border-[#D1B2B2]/60 h-[calc(100svh-96px)] sm:h-[calc(100dvh-116px)]"
-      style={{ height: "calc(100dvh - var(--navbar-height, 116px))" }}
+      aria-roledescription="carousel"
+      aria-label="Featured corporate gift collections"
+      className="relative w-full bg-[#FAF8F5] border-b border-[#D1B2B2]/60"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
     >
-      {/* 1. Background studio table tone matching the photo */}
-      <div className="absolute inset-0 bg-[#FAF6ED] pointer-events-none" />
+      <h1 className="sr-only">CrownLeaf corporate gifting: welcome kits, executive gifts and drinkware</h1>
 
-      {/* 2. Uncropped Hamper Image pinned to the right and scaled to fit container height */}
-      <div className="absolute right-0 top-0 bottom-0 h-full flex items-center justify-end pointer-events-none select-none py-1 sm:py-2.5 lg:py-3.5 pr-0 sm:pr-2 lg:pr-3">
-        <Image
-          src="/images/hero-showcase.jpg"
-          alt="CrownLeaf Luxury Executive Corporate Gifting Hamper"
-          width={1024}
-          height={576}
-          priority
-          className="h-full w-auto max-w-none object-contain object-right select-none [-webkit-mask-image:linear-gradient(to_right,transparent_0%,black_15%)] [mask-image:linear-gradient(to_right,transparent_0%,black_15%)]"
-        />
+      <div
+        className="overflow-hidden touch-pan-y"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          pointerStartX.current = null;
+        }}
+      >
+        <div
+          className="flex"
+          style={{
+            transform: `translateX(-${index * 100}%)`,
+            transition: animate && !reduced ? `transform ${SLIDE_MS}ms ease-out` : "none",
+          }}
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget) settle();
+          }}
+        >
+          {TRACK.map((slide, i) => {
+            const isClone = i === 0 || i === TOTAL + 1;
+            const isActive = i === index;
+            const realPosition = isClone ? (i === 0 ? TOTAL : 1) : i;
+            return (
+              <article
+                key={`${i}-${slide.id}`}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${realPosition} of ${TOTAL}`}
+                aria-hidden={!isActive}
+                data-current={realPosition - 1 === activeDot}
+                className="w-full shrink-0 lg:relative"
+              >
+                {/* Banner image: tall crop on small screens, full 3:1 on desktop */}
+                <div className="relative w-full aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/1] bg-[#F3EDE4] overflow-hidden">
+                  <Image
+                    src={slide.image}
+                    alt={isClone ? "" : slide.alt}
+                    fill
+                    priority={i === 1}
+                    // Other slides load eagerly too, so a slide is never blank when it slides in.
+                    loading={i === 1 ? undefined : "eager"}
+                    sizes="100vw"
+                    draggable={false}
+                    className={`hero-img object-cover ${slide.mobilePos} ${slide.desktopPos} select-none`}
+                  />
+                </div>
+
+                {/* Text + CTA: below the image on small screens, over the empty left area on desktop */}
+                <div className="lg:absolute lg:inset-0">
+                  <div className="max-w-[1300px] mx-auto h-full px-4 sm:px-6 lg:px-8 pt-6 lg:pt-0 flex items-center">
+                    <div
+                      className={`w-full lg:max-w-[340px] xl:max-w-[420px] 2xl:max-w-[470px] ${slide.panel || ""}`}
+                    >
+                      <h2 style={{ "--hero-i": 0 }} className="hero-anim text-2xl sm:text-3xl lg:text-[28px] xl:text-[36px] 2xl:text-[42px] font-bold tracking-tight text-[#003108] leading-[1.15] text-balance">
+                        {slide.headline}
+                      </h2>
+                      <p style={{ "--hero-i": 1 }} className="hero-anim mt-2 text-sm lg:text-[15px] text-stone-700 leading-relaxed max-w-md">
+                        {slide.text}
+                      </p>
+                      <Link
+                        href={slide.href}
+                        tabIndex={isActive ? 0 : -1}
+                        style={{ "--hero-i": 2 }}
+                        className="hero-anim mt-5 lg:mt-6 inline-flex items-center justify-center px-6 py-3 bg-[#8E6935] hover:bg-[#7A5A2D] text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003108] focus-visible:ring-offset-2"
+                      >
+                        {slide.cta}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
 
-      {/* 3. Hero Content Container (Positioned in the Open Left Studio Space) */}
-      <div className="relative z-10 max-w-[1300px] mx-auto w-full h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
-          <div className="max-w-[380px] xs:max-w-[420px] sm:max-w-[450px] lg:max-w-[480px]">
-            {/* Eyebrow Tag */}
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.22em] text-[#A67D44] block mb-2 sm:mb-2.5">
-              Premium Corporate Gifting
-            </span>
+      {/* Controls: a row under the slide on small screens, overlaid on the banner on desktop */}
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 lg:contents">
+        <button
+          type="button"
+          onClick={prev}
+          aria-label="Previous slide"
+          className={`${arrowButtonClass} lg:absolute lg:left-4 lg:top-1/2 lg:-translate-y-1/2 lg:z-20`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-            {/* Display Headline */}
-            <h1 className="text-2xl xs:text-3xl sm:text-4xl lg:text-[44px] font-bold tracking-tight text-[#003108] leading-[1.14]">
-              Thoughtful Gifts.{" "}
-              <span className="text-[#A67D44] block sm:inline">Strong Impressions.</span>
-            </h1>
-
-            {/* Subtle Atelier Divider */}
-            <div className="flex items-center gap-2 my-3 sm:my-3.5">
-              <div className="h-px w-8 bg-[#A67D44]/40" />
-              <div className="w-1.5 h-1.5 rotate-45 border border-[#A67D44]" />
-              <div className="h-px w-8 bg-[#A67D44]/40" />
+        {/* Dots + pause: no background; on desktop aligned with the text, on the light left side of the banner */}
+        <div className="lg:absolute lg:inset-x-0 lg:bottom-5 lg:z-20 lg:pointer-events-none">
+          <div className="flex items-center gap-3 lg:max-w-[1300px] lg:mx-auto lg:px-8 lg:pointer-events-auto">
+            <div className="flex items-center gap-2">
+              {SLIDES.map((slide, k) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => startMove(k + 1)}
+                  aria-label={`Go to slide ${k + 1}: ${slide.headline}`}
+                  aria-current={k === activeDot}
+                  className={`h-1.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8E6935] ${
+                    k === activeDot ? "w-8 bg-[#003108]" : "w-3 bg-[#003108]/35 hover:bg-[#003108]/65"
+                  }`}
+                />
+              ))}
             </div>
-
-            {/* Subtitle */}
-            <p className="text-xs sm:text-sm lg:text-[15px] text-stone-700 leading-relaxed font-normal max-w-md">
-              Elevate relationships and show appreciation with curated, branded gifts that leave a lasting impact on employees, clients, and partners.
-            </p>
-
-            {/* Action Buttons */}
-            <div className="mt-5 sm:mt-7 flex flex-wrap items-center gap-3 sm:gap-4">
-              <a
-                href="#inventory"
-                className="inline-flex items-center justify-center px-5 sm:px-7 py-2.5 sm:py-3.5 bg-[#A67D44] hover:bg-[#8E6935] text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs"
-              >
-                <span>Explore Corporate Gifts</span>
-                <span className="ml-2 text-xs">→</span>
-              </a>
-
-              <a
-                href="https://wa.me/917760775875?text=Hi%20Crownleaf,%20I%20would%20like%20to%20request%20a%20corporate%20gifting%20quote."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-5 sm:px-7 py-2.5 sm:py-3.5 bg-white/90 hover:bg-white text-[#003108] border border-[#003108]/30 hover:border-[#003108] text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-xs transition-colors shadow-xs"
-              >
-                Request a Quote
-              </a>
-            </div>
-
-            {/* 3. Trust Badges Strip with Prominent Sized Icons */}
-            <div className="mt-7 sm:mt-9 pt-4 sm:pt-5 border-t border-[#D1B2B2]/60 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              {/* Badge 1: Bulk Orders */}
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            <button
+              type="button"
+              onClick={() => setUserPaused((p) => !p)}
+              aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+              className="w-7 h-7 flex items-center justify-center text-[#003108] hover:text-[#8E6935] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8E6935]"
+            >
+              {userPaused ? (
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
                 </svg>
-                <div className="leading-tight">
-                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Bulk Orders</div>
-                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Made Easy</div>
-                </div>
-              </div>
-
-              {/* Badge 2: Brand Customization */}
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
                 </svg>
-                <div className="leading-tight">
-                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Brand</div>
-                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Customization</div>
-                </div>
-              </div>
-
-              {/* Badge 3: Premium Quality */}
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-                <div className="leading-tight">
-                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Premium</div>
-                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Quality</div>
-                </div>
-              </div>
-
-              {/* Badge 4: Nationwide Delivery */}
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-[#A67D44] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                </svg>
-                <div className="leading-tight">
-                  <div className="text-[11px] sm:text-xs font-bold text-[#003108]">Nationwide</div>
-                  <div className="text-[10px] sm:text-[10.5px] text-stone-500 font-normal">Delivery</div>
-                </div>
-              </div>
-            </div>
+              )}
+            </button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={next}
+          aria-label="Next slide"
+          className={`${arrowButtonClass} lg:absolute lg:right-4 lg:top-1/2 lg:-translate-y-1/2 lg:z-20`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
     </section>
   );
 }

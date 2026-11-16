@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Reveal from "@/components/Reveal";
 
 const BENTO_CATEGORIES = [
   {
@@ -77,8 +78,8 @@ export default function CategoryBentoGrid() {
     >
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header with Flanking Architectural Hairlines */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-10 lg:mb-12">
-          <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+        <Reveal className="flex items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-10 lg:mb-12">
+          <div className="hairline-l h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
           <div className="text-center">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.25em] text-[#A67D44] block mb-1">
               Bespoke Corporate Collections
@@ -87,16 +88,16 @@ export default function CategoryBentoGrid() {
               Curated Gifting Categories
             </h2>
           </div>
-          <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
-        </div>
+          <div className="hairline-r h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+        </Reveal>
 
         {/* Bento Grid Container */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
-          {BENTO_CATEGORIES.map((item) => (
+          {BENTO_CATEGORIES.map((item, i) => (
+            <Reveal key={item.id} index={i} className={item.span}>
             <Link
-              key={item.id}
               href={item.href}
-              className={`group relative overflow-hidden rounded-none border border-[#E2D9CF] bg-stone-900 flex flex-col justify-end focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A67D44] ${item.span}`}
+              className="group relative overflow-hidden rounded-none border border-[#E2D9CF] bg-stone-900 flex flex-col justify-end h-full min-h-[inherit] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A67D44]"
             >
               {/* Background Product Image with subtle hover zoom */}
               <div className="absolute inset-0 w-full h-full overflow-hidden">
@@ -151,6 +152,7 @@ export default function CategoryBentoGrid() {
                 </div>
               </div>
             </Link>
+            </Reveal>
           ))}
         </div>
       </div>

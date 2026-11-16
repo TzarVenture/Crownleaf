@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Reveal from "@/components/Reveal";
 
 const CATEGORIES = [
   {
@@ -52,21 +53,25 @@ export default function CategoryShowcase({ onSelectCategory }) {
     >
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header with Flanking Architectural Hairlines */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6 mb-5 sm:mb-6">
-          <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+        <Reveal className="flex items-center justify-center gap-3 sm:gap-6 mb-5 sm:mb-6">
+          <div className="hairline-l h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
           <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#003108] text-center whitespace-normal">
             Beautiful Gifts They’ll Actually Love
           </h2>
-          <div className="h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
-        </div>
+          <div className="hairline-r h-px flex-1 max-w-[60px] sm:max-w-[140px] md:max-w-[200px] bg-[#D1B2B2]/80" />
+        </Reveal>
 
         {/* Responsive Showcase Stage: Horizontal swipe on mobile, 5-col grid on desktop */}
         <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-5 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scrollbar-none pb-2 sm:pb-0 gap-3 sm:gap-4 lg:gap-4.5 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {CATEGORIES.map((category) => (
-            <Link
+          {CATEGORIES.map((category, i) => (
+            <Reveal
               key={category.id}
+              index={i}
+              className="flex-shrink-0 w-[58vw] max-w-[210px] sm:w-auto snap-start"
+            >
+            <Link
               href={category.href}
-              className="flex-shrink-0 w-[58vw] max-w-[210px] sm:w-auto snap-start block bg-[#FAF6F0] rounded-none border border-[#E8E0D5] overflow-hidden shadow-2xs"
+              className="block bg-[#FAF6F0] rounded-none border border-[#E8E0D5] overflow-hidden shadow-2xs"
             >
               {/* Compact Product Stage */}
               <div className="relative aspect-square sm:aspect-[4/4.3] w-full bg-[#FAF6F0] overflow-hidden">
@@ -89,6 +94,7 @@ export default function CategoryShowcase({ onSelectCategory }) {
                 </span>
               </div>
             </Link>
+            </Reveal>
           ))}
         </div>
       </div>

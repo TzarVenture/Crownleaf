@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-crown-green: #17472F;
-  --color-crown-green-dark: #123825;
-  --color-crown-gold: #A47A3C;
+  --color-crown-green: #003108;
+  --color-crown-green-dark: #002205;
+  --color-crown-gold: #A67D44;
   --color-crown-gold-hover: #8E6935;
-  --color-crown-cream: #FAF7F0;
-  --color-crown-border: #E4DCCF;
-  --color-crown-canvas: #F4EFE6;
+  --color-crown-cream: #EFE8E0;
+  --color-crown-border: #D1B2B2;
+  --color-crown-canvas: #FAF8F5;
 
   --font-montserrat: var(--font-montserrat), Montserrat, sans-serif;
   --font-cursive: "Alex Brush", cursive;
@@ -23,9 +23,115 @@ html {
 }
 
 body {
-  background-color: #F4EFE6;
+  background-color: #FAF8F5;
   color: #1E293B;
   font-family: var(--font-montserrat), Montserrat, sans-serif;
+}
+
+/* ------------------------------------------------------------------
+   Motion
+   One motion language for the whole site: a short fade plus a small
+   upward drift, one easing curve, played once when an element first
+   enters the screen. Only opacity and transform are animated.
+   ------------------------------------------------------------------ */
+:root {
+  --ease-reveal: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-reveal: 600ms;
+  --reveal-step: 60ms;
+}
+
+/* Scroll reveal (see components/Reveal.jsx). Hidden state is only added
+   by script, so content is always visible without JavaScript. */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.reveal-hidden,
+.reveal-hidden.reveal-in {
+  transition:
+    opacity var(--dur-reveal) var(--ease-reveal),
+    transform var(--dur-reveal) var(--ease-reveal);
+  transition-delay: calc(var(--reveal-i, 0) * var(--reveal-step));
+}
+
+.reveal-hidden.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Section heading hairlines draw outward from the centre */
+.hairline-l {
+  transform-origin: right center;
+}
+
+.hairline-r {
+  transform-origin: left center;
+}
+
+.reveal-hidden .hairline-l,
+.reveal-hidden .hairline-r {
+  transform: scaleX(0);
+  transition: transform 800ms var(--ease-reveal) 150ms;
+}
+
+.reveal-hidden.reveal-in .hairline-l,
+.reveal-hidden.reveal-in .hairline-r {
+  transform: scaleX(1);
+}
+
+/* Hero slides: text rises in and the banner settles when a slide becomes current.
+   The reset to the hidden state is delayed until the slide has left the screen. */
+.hero-anim {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0s linear 650ms,
+    transform 0s linear 650ms;
+}
+
+.hero-img {
+  transform: scale(1.04);
+  transition: transform 0s linear 650ms;
+}
+
+[data-current="true"] .hero-anim {
+  opacity: 1;
+  transform: none;
+  /* Per-property delays so the CTA's hover colour change stays instant */
+  transition:
+    opacity 600ms var(--ease-reveal) calc(var(--hero-i, 0) * 70ms + 200ms),
+    transform 600ms var(--ease-reveal) calc(var(--hero-i, 0) * 70ms + 200ms),
+    background-color 150ms ease 0s,
+    color 150ms ease 0s;
+}
+
+[data-current="true"] .hero-img {
+  transform: scale(1);
+  transition: transform 1400ms var(--ease-reveal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-hidden,
+  .reveal-hidden.reveal-in,
+  .hero-anim,
+  [data-current="true"] .hero-anim {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .hero-img,
+  [data-current="true"] .hero-img {
+    transform: none;
+    transition: none;
+  }
+
+  .reveal-hidden .hairline-l,
+  .reveal-hidden .hairline-r {
+    transform: none;
+    transition: none;
+  }
 }
 
 /* Minimalist warm scrollbar matching Crownleaf palette */
