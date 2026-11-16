@@ -12,6 +12,7 @@ export default function OccasionEnquiryForm() {
     budget: "",
     quantity: "",
     consent: false,
+    website: "", // honeypot, must stay empty
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +71,6 @@ export default function OccasionEnquiryForm() {
         src="https://crownleaf.co/wp-content/uploads/2025/10/WhatsApp-Image-2025-10-08-at-1.16.06-PM.jpeg"
         alt="CrownLeaf Luxury Gift Hampers & Premium Business Gifting for Every Occasion"
         fill
-        priority
         sizes="100vw"
         className="object-cover object-center select-none"
       />
@@ -111,20 +111,26 @@ export default function OccasionEnquiryForm() {
                       budget: "",
                       quantity: "",
                       consent: false,
+                      website: "",
                     });
                   }}
-                  className="inline-flex items-center justify-center px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#A67D44] text-white hover:bg-[#8E6935] transition-colors shadow-xs cursor-pointer active:scale-95"
+                  className="inline-flex items-center justify-center px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider bg-[#8E6935] text-white hover:bg-[#7A5A2D] transition-colors shadow-xs cursor-pointer active:scale-95"
                 >
                   Send Another Enquiry
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-1.5 sm:space-y-2 my-auto">
+                {/* Honeypot: hidden from people and assistive tech */}
+                <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+                  <label htmlFor="occasion-website">Leave this field empty</label>
+                  <input id="occasion-website" name="website" type="text" tabIndex={-1} autoComplete="off" value={formData.website} onChange={handleChange} />
+                </div>
                 {/* Row 1: Name & Email in 2 columns */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label htmlFor="occasion-name" className="block text-[10px] sm:text-[11px] font-semibold text-[#17472F] mb-0.5">
-                      Name <span className="text-[#A67D44]">*</span>
+                      Name <span className="text-[#8E6935]">*</span>
                     </label>
                     <input
                       id="occasion-name"
@@ -140,7 +146,7 @@ export default function OccasionEnquiryForm() {
 
                   <div>
                     <label htmlFor="occasion-email" className="block text-[10px] sm:text-[11px] font-semibold text-[#17472F] mb-0.5">
-                      Email <span className="text-[#A67D44]">*</span>
+                      Email <span className="text-[#8E6935]">*</span>
                     </label>
                     <input
                       id="occasion-email"
@@ -224,7 +230,7 @@ export default function OccasionEnquiryForm() {
                 {/* Consent Checkbox */}
                 <div className="pt-0.5">
                   <span className="block text-[10px] sm:text-[11px] font-semibold text-[#17472F] mb-0.5">
-                    Consent <span className="text-[#A67D44]">*</span>
+                    Consent <span className="text-[#8E6935]">*</span>
                   </span>
                   <label htmlFor="occasion-consent" className="flex items-start gap-1.5 cursor-pointer">
                     <input
@@ -254,7 +260,7 @@ export default function OccasionEnquiryForm() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-2 sm:py-2.5 px-4 rounded-lg font-bold uppercase tracking-wider text-[11px] sm:text-xs bg-[#A67D44] hover:bg-[#8E6935] text-white transition-all shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer disabled:opacity-75 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17472F]"
+                    className="w-full py-2 sm:py-2.5 px-4 rounded-lg font-bold uppercase tracking-wider text-[11px] sm:text-xs bg-[#8E6935] hover:bg-[#7A5A2D] text-white transition-all shadow-md hover:shadow-lg active:scale-[0.99] cursor-pointer disabled:opacity-75 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17472F]"
                   >
                     {isSubmitting ? "Sending..." : "Send Message"}
                   </button>

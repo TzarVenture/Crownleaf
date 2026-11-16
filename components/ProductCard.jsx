@@ -91,7 +91,7 @@ export default function ProductCard({
             {/* Title clamped to max 2 lines with lighter, legible typography */}
             <h3
               title={product.name}
-              className="text-xs sm:text-sm font-medium text-stone-800 group-hover:text-[#A67D44] leading-snug line-clamp-2 h-[2.4rem] sm:h-[2.5rem] flex items-start transition-colors duration-200"
+              className="text-xs sm:text-sm font-medium text-stone-800 group-hover:text-[#8E6935] leading-snug line-clamp-2 h-[2.4rem] sm:h-[2.5rem] flex items-start transition-colors duration-200"
             >
               {product.name}
             </h3>

@@ -1,99 +1,77 @@
 import { NextResponse } from "next/server";
 import { wcApi } from "@/lib/woocommerce";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
+
+const SORTS = {
+  latest: { orderby: "date", order: "desc" },
+  popularity: { orderby: "popularity", order: "desc" },
+  price_asc: { orderby: "price", order: "asc" },
+  price_desc: { orderby: "price", order: "desc" },
+  title_asc: { orderby: "title", order: "asc" },
+  rating: { orderby: "rating", order: "desc" },
+};
+const STOCK_STATUSES = new Set(["instock", "outofstock", "onbackorder"]);
+const MAX_PER_PAGE = 48;
+
+const emptyResult = (page, perPage) => ({ products: [], total: 0, totalPages: 0, page, perPage });
+
+const toPositiveInt = (value, fallback, max = Number.MAX_SAFE_INTEGER) => {
+  const n = Number.parseInt(value ?? "", 10);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(n, max);
+};
+
+const toPrice = (value) => {
+  const n = Number.parseFloat(value ?? "");
+  return Number.isFinite(n) && n >= 0 ? String(n) : null;
+};
 
 export async function GET(request) {
+  const limit = rateLimit(`products:${getClientIp(request)}`, { limit: 120, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
+
+  const { searchParams } = new URL(request.url);
+  const page = toPositiveInt(searchParams.get("page"), 1, 1000);
+  const perPage = toPositiveInt(searchParams.get("per_page"), 18, MAX_PER_PAGE);
+
   try {
-    const { searchParams } = new URL(request.url);
-
-    const categoryParam = searchParams.get("category"); // can be slug or numeric ID
-    const minPrice = searchParams.get("min_price");
-    const maxPrice = searchParams.get("max_price");
-    const stockStatus = searchParams.get("stock_status");
-    const search = searchParams.get("search");
-    const sort = searchParams.get("sort") || "latest";
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const perPage = parseInt(searchParams.get("per_page") || "18", 10);
-
     // Build WooCommerce REST API v3 query parameters
     const params = {
       status: "publish", // Mandatory: only show published products
-      stock_status: "instock", // Strictly show in-stock products only
+      stock_status: "instock", // In-stock products only unless a valid override is requested
       per_page: perPage,
-      page: Math.max(1, page),
+      page,
+      ...(SORTS[searchParams.get("sort")] || SORTS.latest),
     };
 
-    // Category Resolution: if slug is provided, resolve to Category ID
+    const stockStatus = searchParams.get("stock_status");
+    if (stockStatus && STOCK_STATUSES.has(stockStatus)) params.stock_status = stockStatus;
+
+    // Category: numeric ID or slug. An unknown category is an empty result, never "all products".
+    const categoryParam = (searchParams.get("category") || "").trim().toLowerCase();
     if (categoryParam && categoryParam !== "all") {
       if (/^\d+$/.test(categoryParam)) {
         params.category = categoryParam;
+      } else if (/^[a-z0-9-]{1,80}$/.test(categoryParam)) {
+        const catRes = await wcApi.get("products/categories", { slug: categoryParam, per_page: 1 });
+        if (!catRes.data?.length) return NextResponse.json(emptyResult(page, perPage));
+        params.category = catRes.data[0].id;
       } else {
-        // Fetch category by slug
-        try {
-          const catRes = await wcApi.get("products/categories", {
-            slug: categoryParam.toLowerCase().trim(),
-            per_page: 1,
-          });
-          if (catRes.data && catRes.data.length > 0) {
-            params.category = catRes.data[0].id;
-          }
-        } catch (catErr) {
-          console.warn("Could not resolve category slug:", categoryParam, catErr?.message);
-        }
+        return NextResponse.json(emptyResult(page, perPage));
       }
     }
 
-    // Price Filtering
-    if (minPrice && !isNaN(parseFloat(minPrice))) {
-      params.min_price = String(parseFloat(minPrice));
-    }
-    if (maxPrice && !isNaN(parseFloat(maxPrice))) {
-      params.max_price = String(parseFloat(maxPrice));
-    }
+    const minPrice = toPrice(searchParams.get("min_price"));
+    const maxPrice = toPrice(searchParams.get("max_price"));
+    if (minPrice) params.min_price = minPrice;
+    if (maxPrice) params.max_price = maxPrice;
 
-    // Availability Filter
-    if (stockStatus) {
-      params.stock_status = stockStatus;
-    }
+    const search = (searchParams.get("search") || "").trim().slice(0, 100);
+    if (search) params.search = search;
 
-    // Search Query
-    if (search && search.trim()) {
-      params.search = search.trim();
-    }
-
-    // Sorting Options
-    switch (sort) {
-      case "price_asc":
-        params.orderby = "price";
-        params.order = "asc";
-        break;
-      case "price_desc":
-        params.orderby = "price";
-        params.order = "desc";
-        break;
-      case "popularity":
-        params.orderby = "popularity";
-        params.order = "desc";
-        break;
-      case "title_asc":
-        params.orderby = "title";
-        params.order = "asc";
-        break;
-      case "rating":
-        params.orderby = "rating";
-        params.order = "desc";
-        break;
-      case "latest":
-      default:
-        params.orderby = "date";
-        params.order = "desc";
-        break;
-    }
-
-    // Execute WooCommerce REST API Query
     const response = await wcApi.get("products", params);
-
-    const total = parseInt(response.headers["x-wp-total"] || "0", 10);
-    const totalPages = parseInt(response.headers["x-wp-totalpages"] || "1", 10);
+    const total = Number.parseInt(response.headers["x-wp-total"] || "0", 10);
+    const totalPages = Number.parseInt(response.headers["x-wp-totalpages"] || "1", 10);
 
     return NextResponse.json({
       products: response.data || [],
@@ -105,13 +83,8 @@ export async function GET(request) {
   } catch (err) {
     console.error("Error in GET /api/products:", err?.response?.data || err.message);
     return NextResponse.json(
-      {
-        products: [],
-        total: 0,
-        totalPages: 0,
-        error: "Unable to retrieve products from WooCommerce",
-      },
-      { status: 500 }
+      { ...emptyResult(page, perPage), error: "Unable to retrieve products from WooCommerce" },
+      { status: 502 }
     );
   }
 }

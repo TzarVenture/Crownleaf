@@ -10,11 +10,11 @@
   --color-crown-canvas: #FAF8F5;
 
   --font-montserrat: var(--font-montserrat), Montserrat, sans-serif;
-  --font-cursive: "Alex Brush", cursive;
+  --font-cursive: var(--font-alex-brush), "Alex Brush", cursive;
 }
 
 .font-cursive {
-  font-family: "Alex Brush", cursive;
+  font-family: var(--font-alex-brush), "Alex Brush", cursive;
 }
 
 html {

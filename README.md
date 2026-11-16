@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# CrownLeaf storefront
 
-## Getting Started
+Headless corporate-gifting store for [crownleaf.co](https://crownleaf.co): a **Next.js** (App Router) front end on top of **WordPress + WooCommerce**.
 
-First, run the development server:
+- Next.js handles pages, routing, SEO, the cart drawer and checkout screens.
+- WordPress/WooCommerce is the catalogue, stock, coupon, shipping, tax and order system, and takes the payment.
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env   # then fill in the WooCommerce keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+| Script | What it does |
+| :-- | :-- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build (must pass with no errors) |
+| `npm run start` | Serve the production build |
+| `npm run lint` | ESLint |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How an order flows
 
-## Learn More
+1. **Browse**: pages read products with the WooCommerce REST API on the server (published products only).
+2. **Cart**: the cart lives in WooCommerce (Store API session). Variable products (e.g. colour) are added by their variation ID.
+3. **Checkout** (`/checkout`): the server re-checks every product, price, shipping rate and coupon against WooCommerce, then creates a *pending* order.
+4. **Payment**: the shopper pays in the Razorpay popup on our own page. The server creates the Razorpay order from the WooCommerce order total, verifies the payment signature and asks Razorpay to confirm the payment, and only then marks the WooCommerce order paid (which updates stock and sends the emails). If the Razorpay keys are not set, checkout falls back to WooCommerce's own order-pay page.
+5. Products with no online price (quote only) show a WhatsApp / enquiry request instead of buy buttons.
 
-To learn more about Next.js, take a look at the following resources:
+## Project map
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Path | Purpose |
+| :-- | :-- |
+| `app/` | Pages (`/`, `/products`, `/product/[slug]`, `/checkout`), API routes, sitemap, robots, error pages |
+| `app/api/*` | Server routes: `cart`, `cart/coupon`, `checkout`, `enquiry`, `products`, `products/categories` |
+| `components/` | UI components |
+| `context/CartContext.jsx` | Cart state (server cart is the source of truth) |
+| `lib/` | WooCommerce client, Store API helpers, shipping, coupons, validation, rate limiting, site constants |
+| `docs/` | Design system and WordPress API notes |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Rules for contributors
 
-## Deploy on Vercel
+See `AGENTS.md`: published products only, WooCommerce keys server-side only, Montserrat typography, 1300px container, no unsolicited commits.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Things configured in WordPress, not here
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Shipping rates, coupons, tax rates (GST), payment gateways, product data (descriptions, SKUs, weights) and the Contact Form 7 form used for enquiries all live in WordPress admin.

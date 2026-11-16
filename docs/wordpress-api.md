@@ -170,6 +170,13 @@ The Store API uses a custom header called `Cart-Token` to track an anonymous vis
 
 ## 5. Orders & Payment Gateway Architecture
 
+> **Implemented flow (current):** `POST /api/checkout` re-validates items, shipping and coupon against WooCommerce and creates a *pending* order through `POST /wc/v3/orders`. The checkout page then calls `POST /api/payment/razorpay/order` (creates the Razorpay order from the WooCommerce total and stores its id on the order) and opens the Razorpay popup. On success it calls `POST /api/payment/razorpay/verify`, which checks the HMAC signature, confirms the payment with Razorpay (order, amount, currency, status) and marks the WooCommerce order paid with `set_paid: true`. Without Razorpay keys, checkout falls back to WooCommerce's own `payment_url`. Required env: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`.
+
+---
+
+### Original design notes (not implemented)
+
+
 * **Official Docs**: [WooCommerce Orders API Reference](https://developer.woocommerce.com/docs/apis/rest-api/v3/orders/)
 * **Payment Integrations**: [Razorpay Web Flow](https://razorpay.com/docs/payments/payment-gateway/web-integration/custom/) | [Stripe Quickstart](https://stripe.com/docs/payments/quickstart)
 

@@ -36,7 +36,7 @@ export default function BrandFeatureSection({ products = [] }) {
             <div>
               {/* Eyebrow Header */}
               <div className="flex items-center gap-2 mb-2 sm:mb-2.5">
-                <span className="text-[10.5px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-[#A67D44]">
+                <span className="text-[10.5px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-[#8E6935]">
                   Reasons to Partner
                 </span>
                 <span className="h-px flex-1 bg-[#D1B2B2]/60" />
@@ -45,14 +45,14 @@ export default function BrandFeatureSection({ products = [] }) {
               {/* Display Headline */}
               <h2 className="text-2xl sm:text-3xl lg:text-[27px] xl:text-[30px] font-bold tracking-tight text-[#003108] leading-[1.18]">
                 Why Brands Love{" "}
-                <span className="text-[#A67D44] block">CrownLeaf</span>
+                <span className="text-[#8E6935] block">CrownLeaf</span>
               </h2>
 
               {/* Subtle Atelier Divider */}
               <div className="flex items-center gap-2 my-3.5 sm:my-4">
-                <div className="h-px w-8 bg-[#A67D44]/40" />
+                <div className="h-px w-8 bg-[#8E6935]/40" />
                 <div className="w-1.5 h-1.5 rotate-45 border border-[#A67D44]" />
-                <div className="h-px w-8 bg-[#A67D44]/40" />
+                <div className="h-px w-8 bg-[#8E6935]/40" />
               </div>
 
               {/* Value Points List with Clean SVGs */}

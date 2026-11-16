@@ -8,10 +8,13 @@ import ProductActions from "@/components/ProductActions";
 import ShareButtons from "@/components/ShareButtons";
 import Footer from "@/components/Footer";
 import { wcApi } from "@/lib/woocommerce";
+import { SITE_URL, formatINR } from "@/lib/site";
 
 export const revalidate = 60; // ISR cache revalidation every 60 seconds
 
-// Memoize getProductBySlug per request pass (prevents duplicate API calls between metadata and page render)
+// Memoize per request pass (prevents duplicate API calls between metadata and page render).
+// A failed WooCommerce request THROWS (so the error page is shown and the last good page stays cached)
+// instead of returning null, which would have been cached as a 404 for a minute.
 const getProductBySlug = cache(async (slug) => {
   try {
     const response = await wcApi.get("products", {
@@ -21,7 +24,30 @@ const getProductBySlug = cache(async (slug) => {
     return response.data && response.data.length > 0 ? response.data[0] : null;
   } catch (err) {
     console.error("Error fetching product by slug:", err?.message);
-    return null;
+    throw new Error("Unable to load this product right now.");
+  }
+});
+
+// Variations for variable products (colour, etc.). Empty for simple products.
+const getVariations = cache(async (product) => {
+  if (product.type !== "variable") return [];
+  try {
+    const response = await wcApi.get(`products/${product.id}/variations`, { per_page: 100 });
+    return (response.data || [])
+      .filter((v) => v.status === "publish")
+      .map((v) => ({
+        id: v.id,
+        price: v.price,
+        regular_price: v.regular_price,
+        attributes: (v.attributes || []).map((a) => ({ name: a.name, option: a.option })),
+        stock_status: v.stock_status,
+        stock_quantity: v.stock_quantity,
+        purchasable: v.purchasable,
+        image: v.image?.src || null,
+      }));
+  } catch (err) {
+    console.error("Error fetching product variations:", err?.message);
+    throw new Error("Unable to load this product right now.");
   }
 });
 
@@ -42,7 +68,7 @@ async function getRelatedProducts(categoryId, currentProductId) {
   }
 }
 
-// Pre-render published products at build time for near-instant navigation (<100ms)
+// Pre-render published products at build time for near-instant navigation
 export async function generateStaticParams() {
   try {
     const response = await wcApi.get("products", {
@@ -59,30 +85,39 @@ export async function generateStaticParams() {
   }
 }
 
-// Dynamic SEO Metadata from WordPress
+const stripTags = (html) => (html || "").replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim();
+
+// Dynamic SEO metadata from WordPress
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
-
-  if (!product) {
-    return {
-      title: "Product Not Found | CrownLeaf",
-    };
+  let product = null;
+  try {
+    product = await getProductBySlug(slug);
+  } catch {
+    return { title: "CrownLeaf Corporate Gifting" };
   }
 
-  const cleanDescription = product.short_description
-    ? product.short_description.replace(/<[^>]*>?/gm, "").trim()
-    : product.description
-    ? product.description.replace(/<[^>]*>?/gm, "").slice(0, 160).trim()
-    : "Bespoke corporate gift from CrownLeaf.";
+  if (!product) {
+    return { title: "Product Not Found", robots: { index: false } };
+  }
+
+  const description =
+    stripTags(product.short_description) ||
+    stripTags(product.description).slice(0, 160) ||
+    "Bespoke corporate gift from CrownLeaf.";
+  const title = `${product.name} | CrownLeaf Corporate Gifting`;
+  const image = product.images?.[0]?.src;
 
   return {
-    title: `${product.name} | CrownLeaf Corporate Gifting`,
-    description: cleanDescription,
+    title: { absolute: title },
+    description,
+    alternates: { canonical: `${SITE_URL}/product/${product.slug}` },
     openGraph: {
-      title: `${product.name} | CrownLeaf Corporate Gifting`,
-      description: cleanDescription,
-      images: product.images && product.images[0]?.src ? [product.images[0].src] : [],
+      title,
+      description,
+      type: "website",
+      url: `${SITE_URL}/product/${product.slug}`,
+      images: image ? [image] : [],
     },
   };
 }
@@ -96,12 +131,10 @@ async function RelatedProductsSection({ categoryId, currentProductId }) {
     <section className="py-16">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <span className="text-xs uppercase tracking-[0.16em] font-bold text-[#A47A3C] block mb-1">
+          <span className="text-xs uppercase tracking-[0.16em] font-bold text-[#8E6935] block mb-1">
             More From This Collection
           </span>
-          <h2 className="text-2xl font-bold text-[#17472F] tracking-tight">
-            Complementary Corporate Gifts
-          </h2>
+          <h2 className="text-2xl font-bold text-[#003108] tracking-tight">Complementary Corporate Gifts</h2>
         </div>
       </div>
 
@@ -122,21 +155,60 @@ export default async function ProductDetailPage({ params }) {
     notFound();
   }
 
+  const variations = await getVariations(product);
+
   const primaryCategory = product.categories && product.categories.length > 0 ? product.categories[0] : null;
-  const isInStock = product.stock_status === "instock";
   const hasDimensions =
     product.dimensions && (product.dimensions.length || product.dimensions.width || product.dimensions.height);
 
+  // Price shown in the header. Variable products show the lowest option price.
+  const optionPrices = variations.map((v) => Number.parseFloat(v.price)).filter(Number.isFinite);
+  const isVariable = product.type === "variable";
+  const priceValue = isVariable && optionPrices.length ? Math.min(...optionPrices) : Number.parseFloat(product.price);
+  const hasPrice = Number.isFinite(priceValue) && priceValue > 0 && product.purchasable !== false;
+  const hasPriceRange = isVariable && optionPrices.length > 1 && Math.max(...optionPrices) !== Math.min(...optionPrices);
+
+  // Structured data so search engines can show price and availability
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: stripTags(product.short_description) || stripTags(product.description).slice(0, 300) || undefined,
+    image: (product.images || []).map((i) => i.src),
+    sku: product.sku || undefined,
+    category: primaryCategory?.name,
+    url: `${SITE_URL}/product/${product.slug}`,
+    brand: { "@type": "Brand", name: "CrownLeaf" },
+    ...(hasPrice
+      ? {
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "INR",
+            price: String(priceValue),
+            availability:
+              product.stock_status === "instock" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            url: `${SITE_URL}/product/${product.slug}`,
+          },
+        }
+      : {}),
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4EFE6]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
       <Navbar />
 
-      <main className="flex-1 max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-10 w-full">
+      <script
+        type="application/ld+json"
+        // Escape "<" so product text can never close the script tag
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+
+      <main id="main-content" className="flex-1 max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-10 w-full">
         {/* Breadcrumb Navigation */}
         <nav aria-label="Breadcrumb" className="mb-4 sm:mb-8 overflow-x-auto scrollbar-none">
-          <ol className="flex items-center gap-2 text-xs text-stone-500 font-medium whitespace-nowrap">
+          <ol className="flex items-center gap-2 text-xs text-stone-600 font-medium whitespace-nowrap">
             <li className="flex-shrink-0">
-              <Link href="/" className="hover:text-[#17472F] transition-colors">
+              <Link href="/" className="hover:text-[#003108] transition-colors">
                 Home
               </Link>
             </li>
@@ -144,13 +216,18 @@ export default async function ProductDetailPage({ params }) {
             {primaryCategory && (
               <>
                 <li className="flex-shrink-0">
-                  <span className="text-stone-600 font-semibold">{primaryCategory.name}</span>
+                  <Link
+                    href={`/products?category=${primaryCategory.slug}`}
+                    className="text-stone-600 font-semibold hover:text-[#003108] transition-colors"
+                  >
+                    {primaryCategory.name}
+                  </Link>
                 </li>
                 <li className="flex-shrink-0 text-stone-400">/</li>
               </>
             )}
             <li
-              className="text-[#17472F] font-semibold truncate max-w-[140px] sm:max-w-xs md:max-w-md flex-shrink"
+              className="text-[#003108] font-semibold truncate max-w-[140px] sm:max-w-xs md:max-w-md flex-shrink"
               title={product.name}
             >
               {product.name}
@@ -160,38 +237,39 @@ export default async function ProductDetailPage({ params }) {
 
         {/* 2-Column Product Showcase Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-16 items-start pb-6 sm:pb-10 lg:pb-16 border-b border-[#E4DCCF]">
-          {/* Left Column: Interactive Borderless Studio Gallery */}
           <div>
             <ProductGallery images={product.images || []} productName={product.name} />
           </div>
 
-          {/* Right Column: Live WordPress Data */}
           <div className="flex flex-col">
-            {/* Category Tag */}
             {primaryCategory && (
-              <span className="text-xs uppercase tracking-[0.16em] font-bold text-[#A47A3C] mb-1.5 sm:mb-2">
+              <span className="text-xs uppercase tracking-[0.16em] font-bold text-[#8E6935] mb-1.5 sm:mb-2">
                 {primaryCategory.name}
               </span>
             )}
 
-            {/* Product Title (Real WordPress Data) */}
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#17472F] tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#003108] tracking-tight leading-tight">
               {product.name}
             </h1>
 
-            {/* Price Header */}
+            {/* Price header */}
             <div className="mt-3 sm:mt-4 flex items-baseline gap-3 pb-3 sm:pb-4 border-b border-[#E4DCCF]">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#17472F] tracking-tight">
-                {product.price ? `₹${product.price}` : "Price On Request"}
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#003108] tracking-tight">
+                {hasPrice ? (
+                  <>
+                    {hasPriceRange && <span className="text-sm font-semibold text-stone-500 mr-1.5">From</span>}
+                    {formatINR(priceValue)}
+                  </>
+                ) : (
+                  "Available on request"
+                )}
               </div>
-              {product.regular_price && product.regular_price !== product.price && (
-                <div className="text-sm line-through text-stone-400 font-light">
-                  ₹{product.regular_price}
-                </div>
+              {!isVariable && hasPrice && product.regular_price && product.regular_price !== product.price && (
+                <div className="text-sm line-through text-stone-500 font-light">{formatINR(product.regular_price)}</div>
               )}
             </div>
+            {hasPrice && <p className="mt-1.5 text-[11px] text-stone-500">Prices exclude shipping. Taxes, if applicable, are shown at payment.</p>}
 
-            {/* SKU (Real WordPress Data) */}
             {product.sku && (
               <div className="mt-4 flex items-center gap-3">
                 <span className="text-xs font-mono text-stone-600 bg-[#FAF7F0] px-2.5 py-1 rounded border border-[#E4DCCF]">
@@ -200,7 +278,6 @@ export default async function ProductDetailPage({ params }) {
               </div>
             )}
 
-            {/* Real Short Description from WordPress */}
             {product.short_description && (
               <div
                 className="mt-6 text-sm text-stone-700 leading-relaxed font-light"
@@ -208,7 +285,6 @@ export default async function ProductDetailPage({ params }) {
               />
             )}
 
-            {/* Real Weight & Dimensions from WordPress */}
             {(product.weight || hasDimensions) && (
               <div className="mt-6 pt-4 border-t border-[#E4DCCF] flex flex-wrap gap-6 text-xs text-stone-600">
                 {product.weight && (
@@ -228,24 +304,21 @@ export default async function ProductDetailPage({ params }) {
               </div>
             )}
 
-            {/* E-Commerce Interactive Actions (Attributes, Quantity Stepper, Add to Cart, Buy Now) */}
+            {/* Options, quantity, add to cart / buy now, or quote request */}
             <div className="mt-6">
-              <ProductActions product={product} />
+              <ProductActions product={product} variations={variations} />
             </div>
 
-            {/* Share Icons */}
             <div className="mt-5 pt-3.5 border-t border-[#E4DCCF]">
               <ShareButtons title={product.name} />
             </div>
           </div>
         </div>
 
-        {/* Real Detailed Description from WordPress (post_content) */}
+        {/* Detailed description from WordPress (post_content) */}
         {product.description && (
           <section className="py-8 sm:py-12 border-b border-[#E4DCCF]">
-            <h2 className="text-xl font-bold text-[#17472F] mb-6 tracking-tight">
-              Product Overview &amp; Specifications
-            </h2>
+            <h2 className="text-xl font-bold text-[#003108] mb-6 tracking-tight">Product Overview &amp; Specifications</h2>
             <div
               className="prose prose-sm max-w-none text-stone-700 leading-relaxed [&>p]:mb-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-4"
               dangerouslySetInnerHTML={{ __html: product.description }}
@@ -253,18 +326,14 @@ export default async function ProductDetailPage({ params }) {
           </section>
         )}
 
-        {/* Related Products from WordPress (Same Category) - Streamed asynchronously */}
+        {/* Related products (same category), streamed asynchronously */}
         {primaryCategory && (
           <Suspense fallback={null}>
-            <RelatedProductsSection
-              categoryId={primaryCategory.id}
-              currentProductId={product.id}
-            />
+            <RelatedProductsSection categoryId={primaryCategory.id} currentProductId={product.id} />
           </Suspense>
         )}
       </main>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
